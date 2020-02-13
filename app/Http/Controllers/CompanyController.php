@@ -69,7 +69,7 @@ class CompanyController extends Controller
             'licence_num' => 'required',
             'manager' => 'required',
             'manager_phone' => 'required',
-            'UserHR' => 'required',
+            'UserHR' => 'required|unique:users,name',
             'PasswordHr' => ['required', 'string'],
             'logo' => 'required|image|mimes:jpg,png,jpeg',
             'cover' => 'required|image|mimes:jpg,png,jpeg',
@@ -203,6 +203,12 @@ class CompanyController extends Controller
 
         }
 
+        // return $company->id;
+
+        $hrId = User::where('id', $company->user_id)->first()->id;
+
+        // return $hrId;
+
         $rules = [
 
             'name' => "required|unique:companies,name,id",
@@ -220,7 +226,7 @@ class CompanyController extends Controller
             'manager_phone' => 'required',
             'logo' => 'required|image|mimes:jpg,png,jpeg',
             'cover' => 'required|image|mimes:jpg,png,jpeg',
-            'UserHR' => 'required',
+            'UserHR' => "required|unique:users,name,hrId",
             'PasswordHr' => ['required', 'string']
         ];
 
@@ -328,7 +334,9 @@ class CompanyController extends Controller
         unlink($path1);
 
 
-        $user = User::where('id', $company->user_id)->delete();
+        User::where('id', $company->user_id)->delete();
+
+        
 
         $company->delete();
 

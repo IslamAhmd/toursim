@@ -18,6 +18,10 @@ class Trip extends Model
 
     ];
 
+
+    protected $appends = array('Destinations');
+
+
     protected $hidden = ['user_id'];
 
     // public function setArrivalDateAttribute($value){
@@ -44,17 +48,32 @@ class Trip extends Model
     	return $this->belongsTo('App\Trip');
     }
 
-    // public function getDestinationsAttribute($value){
 
-    //     return json_decode($value);
+    // public function getGroupNameAttribute(){
 
-    //     // $arr = [];
-
-    //     // foreach ($value as $one) {
-            
-
-
-    //     // }
+    //     return 'lol';
 
     // }
+
+    public function getDestinationsAttribute($dests){
+
+        // $arr = [];
+
+        // // $dests = $this->Destinations;
+
+        // foreach ((array) $dests as $dest) {
+            
+        //     $obj->dest = $dest;
+
+        //     $myJSON = json_encode($obj);
+
+        //     $arr = $myJSON;
+
+        //     // array_push($arr, $myJSON);
+
+        // }
+
+        return 1;
+
+    }
 }

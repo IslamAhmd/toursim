@@ -25,6 +25,7 @@ class TripController extends Controller
 
         $Groupstrips = Trip::with(['destinations', 'programs'])->where('trip_type', 'groups')->get();
 
+
         return response()->json([
 
             'status' => 'success',
