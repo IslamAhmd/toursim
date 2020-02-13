@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\User;
 use App\Role;
+use App\Company;
 use JWTAuth;
 use Illuminate\Support\Facades\Auth;
 use Validator;
@@ -23,16 +24,44 @@ class UserController extends Controller
                  ]);
             }
 
+            if (Company::where('user_id', $user->id)->exists()) {
 
-            if (Auth::attempt($credentials)) {
-                $token = JWTAuth::attempt($credentials);
-                return response()->json([
-                	"status" => "success",
-                	"data" => [
-                        "token" => $token,
-                        "user" => $user
-                    ]
-                ], 200);
+                $companyId = Company::where('user_id', $user->id)->first()->id;
+
+                $user->company_id = $companyId;
+
+                if (Auth::attempt($credentials)) {
+
+                    $token = JWTAuth::attempt($credentials);
+                    return response()->json([
+                        "status" => "success",
+                        "data" => [
+                            "token" => $token,
+                            "user" => $user
+                        ]
+                    ], 200);
+
+
+
+                }
+    
+            } else {
+
+                if (Auth::attempt($credentials)) {
+
+                    $token = JWTAuth::attempt($credentials);
+                    return response()->json([
+                        "status" => "success",
+                        "data" => [
+                            "token" => $token,
+                            "user" => $user
+                        ]
+                    ], 200);
+
+
+
+                }
+
             }
 
 

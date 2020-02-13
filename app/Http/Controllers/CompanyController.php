@@ -19,6 +19,15 @@ class CompanyController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+
+    public function __construct(){
+
+        $this->middleware('Admin')->except(['destroy']);
+        $this->middleware('SuperAdmin')->only(['destroy']);
+
+    }
+
+
     public function index()
     {
         $companies = Company::with('hr')->get();
@@ -111,15 +120,6 @@ class CompanyController extends Controller
         $company->save();
 
 
-        // $user = User::create([
-
-        //     'name' => $request->UserHR,
-        //     'password' => bcrypt($request->PasswordHR),
-        //     'role_id' => Role::where('name', 'hr')->first()->id,
-        //     'role_name' => Role::where('name', 'hr')->first()->name,
-
-        // ]);
-
         $user = new User;
         $user->name = $request->UserHR;
         $user->password = bcrypt($request->PasswordHR);
@@ -203,15 +203,18 @@ class CompanyController extends Controller
 
         }
 
-        // return $company->id;
 
-        $hrId = User::where('id', $company->user_id)->first()->id;
+        $hrUserId = Hr::where('company_id', $company->id)->first()->user_id;
+        // return $hrUserId;
+        $user = User::where('id', $hrUserId)->first();
 
-        // return $hrId;
+        $userId = $user->id;
+
+        // return $userId;
 
         $rules = [
 
-            'name' => "required|unique:companies,name,id",
+            'name' => "required|unique:companies,name,$id",
             'address' => 'required',
             'telephone' => 'required',
             'mobile' => 'required',
@@ -226,7 +229,7 @@ class CompanyController extends Controller
             'manager_phone' => 'required',
             'logo' => 'required|image|mimes:jpg,png,jpeg',
             'cover' => 'required|image|mimes:jpg,png,jpeg',
-            'UserHR' => "required|unique:users,name,hrId",
+            'UserHR' => "required|unique:users,name,$userId",
             'PasswordHr' => ['required', 'string']
         ];
 
@@ -274,15 +277,14 @@ class CompanyController extends Controller
         $company->user_id = Auth::id();
         $company->save();
 
-        $user = User::where('id', $company->user_id)->first();
-        $user->update([
 
-            'name' => $request->UserHR,
-            'password' => bcrypt($request->PasswordHR),
-            'role_id' => Role::where('name', 'hr')->first()->id,
-            'role_name' => Role::where('name', 'hr')->first()->name,
 
-        ]);
+        $user->name = $request->UserHR;
+        $user->password = bcrypt($request->PasswordHR);
+        $user->role_id = Role::where('name', 'hr')->first()->id;
+        $user->role_name = Role::where('name', 'hr')->first()->name;
+        $user->update();
+
 
         $company->hr()->delete();
 
@@ -327,26 +329,47 @@ class CompanyController extends Controller
 
         }
 
-        $path = public_path() . "/data/" . $company->name . '/' . $company->logo;
-        unlink($path);
-
-        $path1 = public_path() . "/data/" . $company->name . '/' . $company->cover;
-        unlink($path1);
-
-
-        User::where('id', $company->user_id)->delete();
-
         
+        if(auth()->user()->role->name == 'super_admin'){
 
-        $company->delete();
 
-        return response()->json([
+            $path = public_path() . "/data/" . $company->name . '/' . $company->logo;
+            unlink($path);
+
+            $path1 = public_path() . "/data/" . $company->name . '/' . $company->cover;
+            unlink($path1);
+
+
+            $hrUserId = Hr::where('company_id', $company->id)->first()->user_id;
+            // return $hrUserId;
+            User::where('id', $hrUserId)->delete();
+            User::where('id', $company->user_id)->delete();
+
+            File::deleteDirectory(public_path('/data/' . $company->name));
+
+
+            $company->delete();
+
+            return response()->json([
 
             'status' => 'success',
             'message' => 'Company deleted Successfully'
 
-        ]);
+            ]);
 
+        } else {
+
+            return response()->json([
+
+                'status' => 'error',
+                'message' => "You can't delete the Company"
+
+            ]);
+
+
+        }
+
+        
 
     }
 }
