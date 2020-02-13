@@ -16,7 +16,7 @@ class CreateDestinationsTable extends Migration
         Schema::create('destinations', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('trip_id');
-            $table->string('name');
+            // $table->string('name');
             $table->date('arrival_date');
             $table->date('departure_date');
             $table->json('accomodation');

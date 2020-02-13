@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateTripProgramsTable extends Migration
+class CreateClientInfosTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,16 +13,15 @@ class CreateTripProgramsTable extends Migration
      */
     public function up()
     {
-        Schema::create('trip_programs', function (Blueprint $table) {
+        Schema::create('client_infos', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->date('trip_date');
-            $table->time('trip_time');
-            $table->text('desc');
-            $table->unsignedBigInteger('trip_id');
+            $table->string('dest_name');
+            $table->date('arrival_date')->nullable();
+            $table->date('departure_date')->nullable();
+            $table->json('accomodation');
+            $table->string('room_category');
+            $table->string('meal_plan');
             $table->timestamps();
-
-            $table->foreign('trip_id')->references('id')->on('trips')->onDelete('cascade');
-            
         });
     }
 
@@ -33,6 +32,6 @@ class CreateTripProgramsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('trip_programs');
+        Schema::dropIfExists('client_infos');
     }
 }

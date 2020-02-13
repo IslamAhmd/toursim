@@ -15,37 +15,35 @@ class CreateClientsTable extends Migration
     {
         Schema::create('clients', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->string('trip_type');
+            $table->unsignedBigInteger('trip_id')->nullable();
+            $table->string('trip_name')->nullable();
             $table->date('date');
             $table->string('name');
             $table->unsignedInteger('contact_num');
             $table->string('category');
             $table->string('travel_agency');
-            $table->string('room_category')->nullable();
-            $table->string('meal_plan')->nullable();
-            $table->unsignedInteger('single')->nullable();
-            $table->unsignedInteger('double')->nullable();
-            $table->unsignedInteger('triple')->nullable();
-            $table->unsignedInteger('quad')->nullable();
-            $table->unsignedInteger('total_rooms')->nullable();
-            $table->unsignedInteger('adult')->nullable();
-            $table->unsignedInteger('child')->nullable();
-            $table->unsignedInteger('infant')->nullable();
-            $table->unsignedInteger('total_people')->nullable();
-            $table->unsignedInteger('seats_num')->nullable();
-            $table->unsignedInteger('extra_seats')->nullable();
-            $table->unsignedInteger('total_seats')->nullable();
+            $table->unsignedInteger('single')->default(0);
+            $table->unsignedInteger('double')->default(0);
+            $table->unsignedInteger('triple')->default(0);
+            $table->unsignedInteger('quad')->default(0);
+            $table->unsignedInteger('total_rooms')->default(0);
+            $table->unsignedInteger('adult')->default(0);
+            $table->unsignedInteger('child')->default(0);
+            $table->unsignedInteger('infant')->default(0);
+            $table->unsignedInteger('total_people')->default(0);
+            $table->unsignedInteger('seats_no')->default(0);
+            $table->unsignedInteger('extra_seats')->default(0);
+            $table->unsignedInteger('total_seats')->default(0);
+            $table->json('seats_numbers');
             $table->string('booking');
             $table->string('seats');
             $table->string('status');
             $table->unsignedInteger('invoice_num');
             $table->text('notes');
-            $table->unsignedBigInteger('trip_id')->nullable();
-            $table->unsignedBigInteger('dest_id')->nullable();
-            $table->string('dest_name')->nullable();
             $table->timestamps();
 
             $table->foreign('trip_id')->references('id')->on('trips')->onDelete('cascade');
-            $table->foreign('dest_id')->references('id')->on('destinations')->onDelete('cascade');
 
 
         });

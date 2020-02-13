@@ -30,6 +30,8 @@ class CreateCompaniesTable extends Migration
             $table->string('manager_phone');
             $table->unsignedBigInteger('user_id')->nullable();
             $table->boolean('status')->default(1);
+            $table->string('logo')->nullable();
+            $table->string('cover')->nullable();
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

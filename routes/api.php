@@ -28,6 +28,8 @@ Route::group(['middleware' => ['jwt.verify']], function() {
 	Route::get('/getcompany', 'CompanyController@getCompany')->middleware(['Admin']);
 	Route::resource('/trip', 'TripController')->except(['create', 'edit'])->middleware(['Admin']);
 	Route::post('/trip/{id}/cooperate', 'TripController@cooperate')->middleware(['Admin']);
+	Route::resource('/client', 'ClientController')->except(['create', 'edit'])->middleware(['Admin']);
+	Route::get('getseats', 'ClientController@getseats');
 
 
 });

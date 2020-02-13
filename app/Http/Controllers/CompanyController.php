@@ -3,9 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\User;
+use App\Role;
+use App\Hr;
 use App\Company;
 use Illuminate\Support\Facades\Auth;
 use Validator;
+use Illuminate\Support\Facades\File;
+use Image;
 
 class CompanyController extends Controller
 {
@@ -16,7 +21,7 @@ class CompanyController extends Controller
      */
     public function index()
     {
-        $companies = Company::get();
+        $companies = Company::with('hr')->get();
 
         return response()->json([
 
@@ -64,6 +69,10 @@ class CompanyController extends Controller
             'licence_num' => 'required',
             'manager' => 'required',
             'manager_phone' => 'required',
+            'UserHR' => 'required',
+            'PasswordHr' => ['required', 'string'],
+            'logo' => 'required|image|mimes:jpg,png,jpeg',
+            'cover' => 'required|image|mimes:jpg,png,jpeg',
 
         ];
 
@@ -77,9 +86,57 @@ class CompanyController extends Controller
             ]);
         }
 
-        $company = Company::create($request->all());
+        $company = Company::create($request->except(['UserHR', 'PasswordHr']));
+
+        \File::makeDirectory(public_path('/data/' . $company->name), 0775, true);
+
+        if($request->hasFile('logo')){
+            $photo = $request->file('logo');
+            $filename = time() . '-' . $photo->getClientOriginalName();
+            $location = public_path('data/' . $company->name . '/' . $filename);
+
+            Image::make($photo)->save($location);
+            $company->logo = $filename; 
+        }
+
+        if($request->hasFile('cover')){
+            $pic = $request->file('cover');
+            $fileName = time() . '-' . $pic->getClientOriginalName();
+            $loc = public_path('data/' . $company->name . '/' . $fileName);
+
+            Image::make($pic)->save($loc);
+            $company->cover = $fileName; 
+        }
         $company->user_id = Auth::id();
         $company->save();
+
+
+        // $user = User::create([
+
+        //     'name' => $request->UserHR,
+        //     'password' => bcrypt($request->PasswordHR),
+        //     'role_id' => Role::where('name', 'hr')->first()->id,
+        //     'role_name' => Role::where('name', 'hr')->first()->name,
+
+        // ]);
+
+        $user = new User;
+        $user->name = $request->UserHR;
+        $user->password = bcrypt($request->PasswordHR);
+        $user->role_id = Role::where('name', 'hr')->first()->id;
+        $user->role_name = Role::where('name', 'hr')->first()->name;
+        $user->save();
+
+        Hr::create([
+
+            'name' => $user->name,
+            'company_id' => $company->id,
+            'company_name' => $company->name,
+            'user_id' => $user->id
+
+        ]);
+
+        $company = $company->with('hr')->find($company->id);
 
         return response()->json([
 
@@ -99,7 +156,7 @@ class CompanyController extends Controller
      */
     public function show($id)
     {
-        $company = Company::find($id);
+        $company = Company::with('hr')->find($id);
 
         if(! $company){
 
@@ -161,7 +218,10 @@ class CompanyController extends Controller
             'licence_num' => 'required',
             'manager' => 'required',
             'manager_phone' => 'required',
-
+            'logo' => 'required|image|mimes:jpg,png,jpeg',
+            'cover' => 'required|image|mimes:jpg,png,jpeg',
+            'UserHR' => 'required',
+            'PasswordHr' => ['required', 'string']
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -174,9 +234,62 @@ class CompanyController extends Controller
             ]);
         }
 
-        $company->update($request->all());
+        $oldName = $company->name;
+
+        $path = public_path() . "/data/" . $oldName . '/' . $company->logo;
+        unlink($path);
+
+        $path1 = public_path() . "/data/" . $oldName . '/' . $company->cover;
+        unlink($path1);
+
+        $company->update($request->except(['UserHR', 'PasswordHr']));
+
+        \File::move(public_path('/data/' . $oldName), public_path('/data/' . $company->name));
+
+        if($request->hasFile('logo')){
+
+            $photo = $request->file('logo');
+            $filename = time() . '-' . $photo->getClientOriginalName();
+            $location = public_path('data/' . $company->name . '/' . $filename);
+
+            Image::make($photo)->save($location);
+            $company->logo = $filename; 
+        }
+
+        if($request->hasFile('cover')){
+
+            $pic = $request->file('cover');
+            $fileName = time() . '-' . $pic->getClientOriginalName();
+            $loc = public_path('data/' . $company->name . '/' . $fileName);
+
+            Image::make($pic)->save($loc);
+            $company->cover = $fileName; 
+        }
         $company->user_id = Auth::id();
         $company->save();
+
+        $user = User::where('id', $company->user_id)->first();
+        $user->update([
+
+            'name' => $request->UserHR,
+            'password' => bcrypt($request->PasswordHR),
+            'role_id' => Role::where('name', 'hr')->first()->id,
+            'role_name' => Role::where('name', 'hr')->first()->name,
+
+        ]);
+
+        $company->hr()->delete();
+
+        Hr::create([
+
+            'name' => $user->name,
+            'company_id' => $company->id,
+            'company_name' => $company->name,
+            'user_id' => $user->id
+
+        ]);
+
+        $company = $company->with('hr')->find($company->id);
 
         return response()->json([
 
@@ -207,6 +320,15 @@ class CompanyController extends Controller
 
 
         }
+
+        $path = public_path() . "/data/" . $company->name . '/' . $company->logo;
+        unlink($path);
+
+        $path1 = public_path() . "/data/" . $company->name . '/' . $company->cover;
+        unlink($path1);
+
+
+        $user = User::where('id', $company->user_id)->delete();
 
         $company->delete();
 

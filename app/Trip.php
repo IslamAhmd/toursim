@@ -14,6 +14,7 @@ class Trip extends Model
     	'guides' => 'array',
     	'accomodations' => 'array',
     	'users' => 'array',
+        'Destinations' => 'array'
 
     ];
 
@@ -42,4 +43,18 @@ class Trip extends Model
     public function user(){
     	return $this->belongsTo('App\Trip');
     }
+
+    // public function getDestinationsAttribute($value){
+
+    //     return json_decode($value);
+
+    //     // $arr = [];
+
+    //     // foreach ($value as $one) {
+            
+
+
+    //     // }
+
+    // }
 }

@@ -10,7 +10,13 @@ class Client extends Model
 
     protected $casts = [
 
-    	'destination' => 'array'
+    	'destination' => 'array',
+    	'seats_numbers' => 'array'
 
     ];
+
+    public function infos(){
+    	return $this->hasMany('App\ClientInfo');
+    }
+
 }

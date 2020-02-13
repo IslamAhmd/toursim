@@ -69,10 +69,12 @@ class UserController extends Controller
         if(Auth::user()->role->name == 'super_admin'){
         	$user->role_id = 2;
         	$user->role_name = 'admin';
-        } elseif(Auth::user()->role->name == 'admin'){
-        	$user->role_id = 3;
-        	$user->role_name = 'hr';
-        } elseif(Auth::user()->role->name == 'hr'){
+        } 
+        // elseif(Auth::user()->role->name == 'admin'){
+        // 	$user->role_id = 3;
+        // 	$user->role_name = 'hr';
+        // } 
+        elseif(Auth::user()->role->name == 'hr'){
         	$user->role_id = 4;
         	$user->role_name = 'user';
         }

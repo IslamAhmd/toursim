@@ -21,12 +21,19 @@ class TripController extends Controller
      */
     public function index()
     {
-        $trips = Trip::with(['destinations', 'programs'])->get();
+        $Daytrips = Trip::with(['destinations', 'programs'])->where('trip_type', 'dayuse')->get();
+
+        $Groupstrips = Trip::with(['destinations', 'programs'])->where('trip_type', 'groups')->get();
 
         return response()->json([
 
             'status' => 'success',
-            'data' => $trips
+            'data' => [
+
+                'dayuse' => $Daytrips,
+                'groups' => $Groupstrips,
+
+            ]
 
         ]);
     }
@@ -46,13 +53,14 @@ class TripController extends Controller
             'group_type' => 'required',
             'group_desc' => 'required',
             'transportations' => 'required',
+            'Destinations' => 'required',
             'guides' => 'required',
             'arrival_date' => 'required',
             'departure_date' => 'required',
             'capacity' => 'integer',
             'remain_chairs' => 'integer',
             'accomodations' => 'required_if:trip_type,groups',
-            'dests.*.name' => 'required_if:trip_type,groups',
+            // 'dests.*.name' => 'required_if:trip_type,groups',
             'dests.*.arrival_date' => 'required_if:trip_type,groups|date',
             'dests.*.departure_date' => 'required_if:trip_type,groups|date',
             'dests.*.accomodation' => 'required_if:trip_type,groups',
@@ -98,7 +106,7 @@ class TripController extends Controller
             Destination::create([
 
                 'trip_id' => $trip->id,
-                'name' => isset($dest['name'])? $dest['name'] : null,
+                'name' => 'glrgmv;lfdkvd',
                 'arrival_date' => isset($dest['arrival_date']) ? $dest['arrival_date'] : null,
                 'departure_date' => isset($dest['departure_date']) ? $dest['departure_date'] : null,
                 'accomodation' => isset($dest['accomodation']) ? $dest['accomodation'] : null
@@ -192,13 +200,14 @@ class TripController extends Controller
             'group_type' => 'required',
             'group_desc' => 'required',
             'transportations' => 'required',
+            'Destinations' => 'required',
             'guides' => 'required',
             'arrival_date' => 'required',
             'departure_date' => 'required',
             'capacity' => 'integer',
             'remain_chairs' => 'integer',
             'accomodations' => 'required_if:trip_type,groups',
-            'dests.*.name' => 'required_if:trip_type,groups',
+            // 'dests.*.name' => 'required_if:trip_type,groups',
             'dests.*.arrival_date' => 'required_if:trip_type,groups|date',
             'dests.*.departure_date' => 'required_if:trip_type,groups|date',
             'dests.*.accomodation' => 'required_if:trip_type,groups',
@@ -245,7 +254,8 @@ class TripController extends Controller
             Destination::create([
 
                 'trip_id' => $trip->id,
-                'name' => isset($dest['name'])? $dest['name'] : null,
+                'name' => 'glrgmv;lfdkvd',
+                // 'name' => isset($dest['name'])? $dest['name'] : null,
                 'arrival_date' => isset($dest['arrival_date']) ? $dest['arrival_date'] : null,
                 'departure_date' => isset($dest['departure_date']) ? $dest['departure_date'] : null,
                 'accomodation' => isset($dest['accomodation']) ? $dest['accomodation'] : null
