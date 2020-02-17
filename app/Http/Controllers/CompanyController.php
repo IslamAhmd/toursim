@@ -22,8 +22,9 @@ class CompanyController extends Controller
 
     public function __construct(){
 
-        $this->middleware('Admin')->except(['destroy']);
-        $this->middleware('SuperAdmin')->only(['destroy']);
+        // $this->middleware('SuperOrAdmin')->only(['index', 'getCompany', 'show']);
+        $this->middleware('Admin')->only(['store', 'update']);
+        $this->middleware('SuperAdmin')->only(['destroy', 'disable']);
 
     }
 
@@ -330,34 +331,7 @@ class CompanyController extends Controller
         }
 
         
-        if(auth()->user()->role->name == 'super_admin'){
-
-
-            $path = public_path() . "/data/" . $company->name . '/' . $company->logo;
-            unlink($path);
-
-            $path1 = public_path() . "/data/" . $company->name . '/' . $company->cover;
-            unlink($path1);
-
-
-            $hrUserId = Hr::where('company_id', $company->id)->first()->user_id;
-            // return $hrUserId;
-            User::where('id', $hrUserId)->delete();
-            User::where('id', $company->user_id)->delete();
-
-            File::deleteDirectory(public_path('/data/' . $company->name));
-
-
-            $company->delete();
-
-            return response()->json([
-
-            'status' => 'success',
-            'message' => 'Company deleted Successfully'
-
-            ]);
-
-        } else {
+        if(! auth()->user()->role->name == 'super_admin'){
 
             return response()->json([
 
@@ -367,9 +341,68 @@ class CompanyController extends Controller
             ]);
 
 
-        }
+        } 
+
+        $path = public_path() . "/data/" . $company->name . '/' . $company->logo;
+        unlink($path);
+
+        $path1 = public_path() . "/data/" . $company->name . '/' . $company->cover;
+        unlink($path1);
+
+
+        $hrUserId = Hr::where('company_id', $company->id)->first()->user_id;
+        // return $hrUserId;
+        User::where('id', $hrUserId)->delete();
+        // User::where('id', $company->user_id)->delete();
+
+        File::deleteDirectory(public_path('/data/' . $company->name));
+
+
+        $company->delete();
+
+        return response()->json([
+
+        'status' => 'success',
+        'message' => 'Company deleted Successfully'
+
+        ]);
 
         
+
+    }
+
+    public function disable(Request $request, $id){
+
+
+        $company = Company::find($id);
+
+        if(! $company){
+
+            return response()->json([
+
+                'status' => 'error',
+                'message' => 'Company not found'
+
+            ]);
+
+
+        }
+
+        $company->update([
+
+            'status' => $request->status
+
+        ]);
+
+        $company = $company->with('hr')->find($company->id);
+
+        return response()->json([
+
+            'status' => 'success',
+            'data' => $company
+
+        ]);
+
 
     }
 }

@@ -4,7 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 
-class ControlMiddleware
+class SuperOrAdminMiddleware
 {
     /**
      * Handle an incoming request.
@@ -16,18 +16,15 @@ class ControlMiddleware
     public function handle($request, Closure $next)
     {
         if(auth()->check()){
-
-            if(auth()->user()->role->name == 'super_admin'){
+            if(auth()->user()->role->name == 'super_admin' || auth()->user()->role->name == 'admin'){
                 
                 return $next($request);
 
-            } elseif(auth()->user()->role->name == 'admin'){
-
-                return $next($request);
-                
             }
 
+            abort(404);
 
-        }    
+        }
+
     }
 }

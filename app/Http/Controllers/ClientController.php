@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Client;
 use App\ClientInfo;
 use App\Trip;
+use App\Bus;
 use Validator;
 
 
@@ -16,6 +17,21 @@ class ClientController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+
+    public function getBuses($id){
+
+        $buses = Bus::where('trip_id', $id)->get(['client_name', 'num', 'accomodation']);
+
+        return response()->json([
+
+            'status' => 'success',
+            'data' => $buses
+
+        ]);
+
+    }
+
+
     public function index()
     {
         $clients = Client::with('infos')->get();
@@ -62,46 +78,32 @@ class ClientController extends Controller
             'double' => 'integer|required_unless:trip_type,dayuse',
             'triple' => 'integer|required_unless:trip_type,dayuse',
             'quad' => 'integer|required_unless:trip_type,dayuse',
-            'total_rooms' => 'integer|required_unless:trip_type,dayuse',
+            // 'total_rooms' => 'integer|required_unless:trip_type,dayuse',
             'adult' => 'integer',
             'child' => 'integer',
             'infant' => 'integer',
-            'total_people' => 'integer',
+            // 'total_people' => 'integer',
             // 'seats_no' => 'integer|required_unless:trip_type,individual',
             'extra_seats' => 'integer|required_unless:trip_type,individual',
             // 'total_seats' => 'integer|required_unless:trip_type,individual',
-            'seats_numbers.*.seat' => 'integer|required_unless:trip_type,individual',
+            'seats_numbers.*' => 'integer|required_unless:trip_type,individual',
             'booking' => 'required',
             'seats' => 'required',
             'status' => 'required',
             'invoice_num' => 'required|integer',
             'notes' => 'required',
-            'dests.*.name' => 'required',
-            'dests.*.arrival_date' => 'date',
-            'dests.*.departure_date' => 'date',
-            'dests.*.accomodation' => 'required',
-            'dests.*.room_category' => 'required',
-            'dests.*.meal_plan' => 'required',
+            'dests' => 'required_unless:trip_type,dayuse',
+            'dests.*.name' => 'required_if:trip_type,individual',
+            'dests.*.arrival_date' => 'date|required_if:trip_type,individual',
+            'dests.*.departure_date' => 'date|required_if:trip_type,individual',
+            'dests.*.accomodation' => 'required_unless:trip_type,dayuse',
+            'dests.*.room_category' => 'required_unless:trip_type,dayuse',
+            'dests.*.meal_plan' => 'required_unless:trip_type,dayuse',
 
         ];
 
-        $messages = [
 
-            'required' => 'هذا الحقل مطلوب',
-            'exists' => 'هذه الرحله غير موجوده',
-            'date' => 'قيمة هذا الحقل لابد ان تكون تاريخا',
-            'integer' => 'قيمة هذا الحقل يجب ان تكون عددا صحيحا',
-            'single.required_unless' => 'هذا الحقل مطلوب اذا كانت الرحله من هذا النوع',
-            'double.required_unless' => 'هذا الحقل مطلوب اذا كانت الرحله من هذا النوع',
-            'triple.required_unless' => 'هذا الحقل مطلوب اذا كانت الرحله من هذا النوع',
-            'quad.required_unless' => 'هذا الحقل مطلوب اذا كانت الرحله من هذا النوع',
-            'total_rooms.required_unless' => 'هذا الحقل مطلوب اذا كانت الرحله من هذا النوع',
-            'extra_seats.required_unless' => 'هذا الحقل مطلوب اذا كانت الرحله من هذا النوع',
-            'seats_numbers.*.seat.required_unless' => 'هذا الحقل مطلوب اذا كانت الرحله من هذا النوع',
-
-        ];
-
-        $validator = Validator::make($request->all(), $rules, $messages);
+        $validator = Validator::make($request->all(), $rules);
 
         if($validator->fails()){
 
@@ -110,6 +112,8 @@ class ClientController extends Controller
               "errors" => $validator->errors()
             ]);
         }
+
+    
 
         $client = Client::create($request->except('dests'));
         $client->single = 1 * $request->single;
@@ -121,14 +125,16 @@ class ClientController extends Controller
 
         $client->seats_no = $client->total_people - $client->infant;
         $client->total_seats = $client->seats_no + $client->extra_seats;
-        $client->trip_name = Trip::where('id', $client->trip_id)->first()->name;
+        $client->trip_name = Trip::where('id', $request->trip_id)->first()->name;
         $client->save();
 
         $dests = $request->dests;
-        foreach ($dests as $dest) {
+
+        foreach ((array) $dests as $dest) {
             ClientInfo::create([
 
-                'dest_name' => $dest['name'],
+                'dest_name' => isset($dest['name'])? $dest['name'] : null,
+                'client_id' => $client->id,
                 'arrival_date' => isset($dest['arrival_date'])? $dest['arrival_date']:null,
                 'departure_date' => isset($dest['departure_date'])? $dest['departure_date']:null,
                 'accomodation' => $dest['accomodation'],
@@ -138,12 +144,59 @@ class ClientController extends Controller
             ]);
         }
 
-        $client = $client->with('infos')->find($client->id);
+        $trip = Trip::where('id', $client->trip_id)->first();
+
+
+        $seatsArr = $client->seats_numbers;
+        foreach ((array) $seatsArr as $seat) {
+            
+            Bus::create([
+
+                'client_id' => $client->id,
+                'trip_id' => $trip->id,
+                'client_name' => $client->name,
+                'num' => $seat,
+                'accomodation' => $client->infos()->pluck('accomodation')
+
+            ]);
+
+        }
+
+        $bus = new Bus;
+
+
+        if($bus->countSeats($trip->id) > $trip->capacity){
+
+            return response()->json([
+              "status" => "error",
+              "message" => "There is no enough chairs"
+
+            ]);
+
+
+        }
+
+        $remain_chairs = $trip->capacity - $bus->countSeats($trip->id);
+
+
+        $trip->update([
+
+            'remain_chairs' => $remain_chairs
+
+        ]);
+        
+
+        $client = $client->with(['infos'])->find($client->id);
 
         return response()->json([
 
             'status' => 'success',
-            'data' => $client
+            'data' => [
+
+                'client' => $client,
+                'remain chairs' => $trip->remain_chairs
+
+            ]
 
         ]);
 
@@ -211,43 +264,36 @@ class ClientController extends Controller
             'contact_num' => 'required|integer',
             'category' => 'required',
             'travel_agency' => 'required',
-            'single' => 'integer',
-            'double' => 'integer',
-            'triple' => 'integer',
-            'quad' => 'integer',
-            'total_rooms' => 'integer',
+            'single' => 'integer|required_unless:trip_type,dayuse',
+            'double' => 'integer|required_unless:trip_type,dayuse',
+            'triple' => 'integer|required_unless:trip_type,dayuse',
+            'quad' => 'integer|required_unless:trip_type,dayuse',
+            // 'total_rooms' => 'integer|required_unless:trip_type,dayuse',
             'adult' => 'integer',
             'child' => 'integer',
             'infant' => 'integer',
-            'total_people' => 'integer',
-            'seats_no' => 'integer',
-            'extra_seats' => 'integer',
-            'total_seats' => 'integer',
-            'seats_numbers.*.seat' => 'integer',
+            // 'total_people' => 'integer',
+            // 'seats_no' => 'integer|required_unless:trip_type,individual',
+            'extra_seats' => 'integer|required_unless:trip_type,individual',
+            // 'total_seats' => 'integer|required_unless:trip_type,individual',
+            'seats_numbers.*' => 'integer|required_unless:trip_type,individual',
             'booking' => 'required',
             'seats' => 'required',
             'status' => 'required',
             'invoice_num' => 'required|integer',
             'notes' => 'required',
-            'dests.*.name' => 'required',
-            'dests.*.arrival_date' => 'date',
-            'dests.*.departure_date' => 'date',
-            'dests.*.accomodation' => 'required',
-            'dests.*.room_category' => 'required',
-            'dests.*.meal_plan' => 'required',
+            'dests' => 'required_unless:trip_type,dayuse',
+            'dests.*.name' => 'required_if:trip_type,individual',
+            'dests.*.arrival_date' => 'date|required_if:trip_type,individual',
+            'dests.*.departure_date' => 'date|required_if:trip_type,individual',
+            'dests.*.accomodation' => 'required_unless:trip_type,dayuse',
+            'dests.*.room_category' => 'required_unless:trip_type,dayuse',
+            'dests.*.meal_plan' => 'required_unless:trip_type,dayuse',
 
         ];
 
-        $messages = [
 
-            'required' => 'هذا الحقل مطلوب',
-            'exists' => 'هذه الرحله غير موجوده',
-            'date' => 'قيمة هذا الحقل لابد ان تكون تاريخا',
-            'integer' => 'قيمة هذا الحقل يجب ان تكون عددا صحيحا',
-
-        ];
-
-        $validator = Validator::make($request->all(), $rules, $messages);
+        $validator = Validator::make($request->all(), $rules);
 
         if($validator->fails()){
 
@@ -256,6 +302,9 @@ class ClientController extends Controller
               "errors" => $validator->errors()
             ]);
         }
+
+        $oldSeatsTotal = $client->total_seats;
+
 
         $client->update($request->except('dests'));
         $client->single = 1 * $request->single;
@@ -266,15 +315,18 @@ class ClientController extends Controller
         $client->total_people = $client->single + $client->double + $client->triple + $client->quad + $client->child + $client->adult + $client->infant;
         $client->seats_no = $client->total_people - 1;
         $client->total_seats = $client->seats_no + $client->extra_seats;
-        $client->trip_name = Trip::where('id', $client->trip_id)->first()->name;
         $client->save();
+
+        // return $oldSeatsTotal;
+
 
         $client->infos()->delete();
         $dests = $request->dests;
-        foreach ($dests as $dest) {
+        foreach ((array) $dests as $dest) {
             ClientInfo::create([
 
-                'dest_name' => $dest['name'],
+                'dest_name' => isset($dest['name'])? $dest['name'] : null,
+                'client_id' => $client->id,
                 'arrival_date' => isset($dest['arrival_date'])? $dest['arrival_date']:null,
                 'departure_date' => isset($dest['departure_date'])? $dest['departure_date']:null,
                 'accomodation' => $dest['accomodation'],
@@ -283,15 +335,66 @@ class ClientController extends Controller
 
             ]);
         }
+        
 
-        $client = $client->with('infos')->find($client->id);
+        $trip = Trip::where('id', $client->trip_id)->first();
+
+        Bus::where('client_id', $client->id)->delete();
+
+        $seatsArr = $client->seats_numbers;
+        foreach ((array) $seatsArr as $seat) {
+            
+            Bus::create([
+
+                'client_id' => $client->id,
+                'trip_id' => $trip->id,
+                'client_name' => $client->name,
+                'num' => $seat,
+                'accomodation' => $client->infos()->pluck('accomodation')
+
+            ]);
+
+        }
+
+        $bus = new Bus;
+
+        if($bus->countSeats($trip->id) > $trip->capacity){
+
+            return response()->json([
+              "status" => "error",
+              "message" => "There is no enough chairs"
+
+            ]);
+
+
+        }
+
+
+        $remain_chairs = $trip->capacity - $bus->countSeats($trip->id);        
+
+
+        $trip->update([
+
+            'remain_chairs' => $remain_chairs
+
+        ]);
+
+        
+        $client = $client->with(['infos'])->find($client->id);
+
 
         return response()->json([
 
             'status' => 'success',
-            'data' => $client
+            'data' => [
+
+                'client' => $client,
+                'remain chairs' => $trip->remain_chairs
+
+            ]
 
         ]);
+
 
     }
 

@@ -10,6 +10,8 @@ use App\Destination;
 use App\TripProgram;
 use Illuminate\Support\Facades\Auth;
 use Validator;
+use \stdClass;
+
 
 
 class TripController extends Controller
@@ -19,6 +21,17 @@ class TripController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+
+
+    public function __construct(){
+
+        // $this->middleware('SuperOrAdmin')->only(['index', 'getCompany', 'show']);
+        $this->middleware('Admin')->only(['store', 'update', 'destroy', 'cooperate']);
+        // $this->middleware('SuperAdmin')->only(['destroy', 'disable']);
+
+    }
+
+
     public function index()
     {
         $Daytrips = Trip::with(['destinations', 'programs'])->where('trip_type', 'dayuse')->get();
@@ -37,6 +50,45 @@ class TripController extends Controller
             ]
 
         ]);
+    }
+
+    public function getTrips(){
+
+        $trips = Trip::with(['destinations', 'programs'])->get();
+
+
+        return response()->json([
+
+            'status' => 'success',
+            'data' => $trips
+
+        ]);
+    }
+
+    public function accomodations($tripId, $destId){
+
+        $tripsAcc = Destination::where('trip_id', $tripId)
+                               ->where('id', $destId)
+                               ->first()->accomodation;
+                               
+
+        $accomodationsArr = [];
+        $obj = new stdClass();
+        foreach ($tripsAcc as $value) {
+            
+            $obj->acc = $value;
+
+            $accomodationsArr[] = $obj;
+
+        }
+
+        return response()->json([
+
+            'status' => 'success',
+            'data' => $accomodationsArr
+
+        ]);
+
     }
 
     /**
@@ -62,9 +114,11 @@ class TripController extends Controller
             'remain_chairs' => 'integer',
             'accomodations' => 'required_if:trip_type,groups',
             // 'dests.*.name' => 'required_if:trip_type,groups',
+            'dests' => 'required_if:trip_type,groups',
             'dests.*.arrival_date' => 'required_if:trip_type,groups|date',
             'dests.*.departure_date' => 'required_if:trip_type,groups|date',
             'dests.*.accomodation' => 'required_if:trip_type,groups',
+            'programs' => 'required',
             'programs.*.date' => 'required|date',
             'programs.*.items.*.time' => 'required',
             'programs.*.items.*.desc' => 'required',
@@ -72,16 +126,7 @@ class TripController extends Controller
 
         ];
 
-        $messages = [
-
-            'required' => 'يجب ادخال قيمه لهذا الحقل',
-            'integer' => 'قيمة هذا الحقل يجب ان تكون عددا صحيحا',
-            'date' => 'قيمة هذا الحقل يجب ان تكون تاريخ',
-            'required_if' => 'هذا الحقل مطلوب اذا كانت الرحله من النوع groups'
-
-        ];
-
-        $validator = Validator::make($request->all(), $rules, $messages);
+        $validator = Validator::make($request->all(), $rules);
 
         if($validator->fails()){
 
@@ -90,6 +135,7 @@ class TripController extends Controller
               "errors" => $validator->errors()
             ]);
         }
+
 
         // add new trip
         $trip = Trip::create($request->except(['dests', 'programs']));
@@ -107,7 +153,7 @@ class TripController extends Controller
             Destination::create([
 
                 'trip_id' => $trip->id,
-                'name' => 'glrgmv;lfdkvd',
+                // 'name' => 'glrgmv;lfdkvd',
                 'arrival_date' => isset($dest['arrival_date']) ? $dest['arrival_date'] : null,
                 'departure_date' => isset($dest['departure_date']) ? $dest['departure_date'] : null,
                 'accomodation' => isset($dest['accomodation']) ? $dest['accomodation'] : null
@@ -117,7 +163,7 @@ class TripController extends Controller
         }
 
         // add program to trip
-        $programs = isset($request->programs)? $request->programs : null;
+        $programs = $request->programs;
        
         foreach ((array) $programs as $program) {
             
@@ -167,6 +213,13 @@ class TripController extends Controller
             ]);
         }
 
+
+        foreach ($trip['destinations'] as $i => $dest) {
+
+            $dest->name = $trip['Destinations'][$i];
+            
+        }
+
         return response()->json([
 
             'status' => 'success',
@@ -209,6 +262,7 @@ class TripController extends Controller
             'remain_chairs' => 'integer',
             'accomodations' => 'required_if:trip_type,groups',
             // 'dests.*.name' => 'required_if:trip_type,groups',
+            'dests' => 'required_if:trip_type,groups',
             'dests.*.arrival_date' => 'required_if:trip_type,groups|date',
             'dests.*.departure_date' => 'required_if:trip_type,groups|date',
             'dests.*.accomodation' => 'required_if:trip_type,groups',
@@ -219,16 +273,7 @@ class TripController extends Controller
 
         ];
 
-        $messages = [
-
-            'required' => 'يجب ادخال قيمه لهذا الحقل',
-            'integer' => 'قيمة هذا الحقل يجب ان تكون عددا صحيحا',
-            'date' => 'قيمة هذا الحقل يجب ان تكون تاريخ',
-            'required_if' => 'هذا الحقل مطلوب اذا كانت الرحله من النوع groups'
-
-        ];
-
-        $validator = Validator::make($request->all(), $rules, $messages);
+        $validator = Validator::make($request->all(), $rules);
 
         if($validator->fails()){
 
@@ -255,8 +300,6 @@ class TripController extends Controller
             Destination::create([
 
                 'trip_id' => $trip->id,
-                'name' => 'glrgmv;lfdkvd',
-                // 'name' => isset($dest['name'])? $dest['name'] : null,
                 'arrival_date' => isset($dest['arrival_date']) ? $dest['arrival_date'] : null,
                 'departure_date' => isset($dest['departure_date']) ? $dest['departure_date'] : null,
                 'accomodation' => isset($dest['accomodation']) ? $dest['accomodation'] : null
@@ -351,13 +394,7 @@ class TripController extends Controller
 
         ];
 
-        $messages = [
-
-            'users.*.user.exists' => 'هذا المستخدم غير موجود'
-
-        ];
-
-        $validator = Validator::make($request->all(), $rules, $messages);
+        $validator = Validator::make($request->all(), $rules);
 
         if($validator->fails()){
 

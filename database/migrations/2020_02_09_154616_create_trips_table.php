@@ -25,7 +25,7 @@ class CreateTripsTable extends Migration
             $table->json('accomodations')->nullable();
             $table->date('arrival_date');
             $table->date('departure_date');
-            $table->unsignedInteger('capacity')->nullable();
+            $table->unsignedInteger('capacity')->default(49);
             $table->unsignedInteger('remain_chairs')->default(0);
             $table->unsignedBigInteger('company_id')->nullable();
             $table->string('company_name')->nullable();

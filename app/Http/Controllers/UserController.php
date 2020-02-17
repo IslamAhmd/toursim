@@ -24,43 +24,40 @@ class UserController extends Controller
                  ]);
             }
 
-            if (Company::where('user_id', $user->id)->exists()) {
 
-                $companyId = Company::where('user_id', $user->id)->first()->id;
-
-                $user->company_id = $companyId;
-
-                if (Auth::attempt($credentials)) {
-
-                    $token = JWTAuth::attempt($credentials);
-                    return response()->json([
-                        "status" => "success",
-                        "data" => [
-                            "token" => $token,
-                            "user" => $user
-                        ]
-                    ], 200);
+            if (Auth::attempt($credentials)) {
 
 
+                    if (Company::where('user_id', $user->id)->exists()) {
+                        
+                        $companyId = Company::where('user_id', $user->id)->first()->id;
 
-                }
-    
-            } else {
+                        $user->company_id = $companyId;
 
-                if (Auth::attempt($credentials)) {
+                        $token = JWTAuth::attempt($credentials);
+                        return response()->json([
+                            "status" => "success",
+                            "data" => [
+                                "token" => $token,
+                                "user" => $user
+                            ]
+                        ], 200);
 
-                    $token = JWTAuth::attempt($credentials);
-                    return response()->json([
-                        "status" => "success",
-                        "data" => [
-                            "token" => $token,
-                            "user" => $user
-                        ]
-                    ], 200);
+                    } else {
+
+                        $user->company_id = null;
+
+                        $token = JWTAuth::attempt($credentials);
+                        return response()->json([
+                            "status" => "success",
+                            "data" => [
+                                "token" => $token,
+                                "user" => $user
+                            ]
+                        ], 200);
 
 
-
-                }
+                    }
 
             }
 

@@ -19,4 +19,8 @@ class Client extends Model
     	return $this->hasMany('App\ClientInfo');
     }
 
+    public function bus(){
+    	return $this->belongsTo('App\Bus');
+    }
+
 }
