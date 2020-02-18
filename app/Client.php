@@ -3,6 +3,7 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Trip;
 
 class Client extends Model
 {
@@ -14,6 +15,7 @@ class Client extends Model
     	'seats_numbers' => 'array'
 
     ];
+
 
     public function infos(){
     	return $this->hasMany('App\ClientInfo');

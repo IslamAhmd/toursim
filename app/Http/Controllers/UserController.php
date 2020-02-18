@@ -26,36 +26,33 @@ class UserController extends Controller
 
             if (Auth::attempt($credentials)) {
 
+                    $user->company_id = null;
+                    $user->status = 0;
+
+
                     if (Company::where('user_id', $user->id)->exists()) {
                         
                         $companyId = Company::where('user_id', $user->id)->first()->id;
 
                         $user->company_id = $companyId;
 
-                        $token = JWTAuth::attempt($credentials);
-                        return response()->json([
-                            "status" => "success",
-                            "data" => [
-                                "token" => $token,
-                                "user" => $user
-                            ]
-                        ], 200);
+                        if(Company::where('user_id', $user->id)->count() == 1){
 
-                    } else {
+                            $user->status = 1;
 
-                        $user->company_id = null;
-
-                        $token = JWTAuth::attempt($credentials);
-                        return response()->json([
-                            "status" => "success",
-                            "data" => [
-                                "token" => $token,
-                                "user" => $user
-                            ]
-                        ], 200);
-
+                        }
 
                     }
+
+
+                    $token = JWTAuth::attempt($credentials);
+                        return response()->json([
+                            "status" => "success",
+                            "data" => [
+                                "token" => $token,
+                                "user" => $user
+                            ]
+                    ], 200);
 
             }
 

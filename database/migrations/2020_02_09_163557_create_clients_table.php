@@ -17,7 +17,6 @@ class CreateClientsTable extends Migration
             $table->bigIncrements('id');
             $table->string('trip_type');
             $table->unsignedBigInteger('trip_id')->nullable();
-            $table->string('trip_name')->nullable();
             $table->date('date');
             $table->string('name');
             $table->unsignedInteger('contact_num');
