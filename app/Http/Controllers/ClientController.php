@@ -18,6 +18,15 @@ class ClientController extends Controller
      * @return \Illuminate\Http\Response
      */
 
+    public function __construct(){
+
+        // $this->middleware('SuperOrAdmin')->only(['index', 'getCompany', 'show']);
+        $this->middleware('Admin')->only(['store', 'update', 'destroy', 'getseats', 'index', 'getBuses', 'show']);
+        // $this->middleware('SuperAdmin')->only(['destroy', 'disable']);
+
+    }
+
+
     public function getBuses($id){
 
         $buses = Bus::where('trip_id', $id)->get(['client_name', 'num', 'accomodation']);
@@ -34,12 +43,21 @@ class ClientController extends Controller
 
     public function index()
     {
-        $clients = Client::with('infos')->get();
+        $groupsClients = Client::with('infos')->where('trip_type', 'groups')->get();
+        $dayuseClients = Client::with('infos')->where('trip_type', 'dayuse')->get();
+        $individualClients = Client::with('infos')->where('trip_type', 'individual')->get();
+
 
         return response()->json([
 
             'status' => 'success',
-            'data' => $clients
+            'data' => [
+
+                'groups' => $groupsClients,
+                'dayuse' => $dayuseClients,
+                'individual' => $individualClients
+
+            ]
 
         ]);
     }
@@ -74,17 +92,17 @@ class ClientController extends Controller
             'contact_num' => 'required|integer',
             'category' => 'required',
             'travel_agency' => 'required',
-            'single' => 'integer|required_unless:trip_type,dayuse',
-            'double' => 'integer|required_unless:trip_type,dayuse',
-            'triple' => 'integer|required_unless:trip_type,dayuse',
-            'quad' => 'integer|required_unless:trip_type,dayuse',
+            'single' => 'integer',
+            'double' => 'integer',
+            'triple' => 'integer',
+            'quad' => 'integer',
             // 'total_rooms' => 'integer|required_unless:trip_type,dayuse',
             'adult' => 'integer',
             'child' => 'integer',
             'infant' => 'integer',
             // 'total_people' => 'integer',
             // 'seats_no' => 'integer|required_unless:trip_type,individual',
-            'extra_seats' => 'integer|required_unless:trip_type,individual',
+            'extra_seats' => 'integer',
             // 'total_seats' => 'integer|required_unless:trip_type,individual',
             'seats_numbers.*' => 'integer|required_unless:trip_type,individual',
             'booking' => 'required',
@@ -146,23 +164,22 @@ class ClientController extends Controller
 
         $trip = Trip::where('id', $client->trip_id)->first();
 
+        $bus = new Bus;
+
 
         $seatsArr = $client->seats_numbers;
         foreach ((array) $seatsArr as $seat) {
             
-            Bus::create([
+            $bus->where('num', $seat)->update([
 
                 'client_id' => $client->id,
                 'trip_id' => $trip->id,
                 'client_name' => $client->name,
-                'num' => $seat,
                 'accomodation' => $client->infos()->pluck('accomodation')
 
             ]);
 
         }
-
-        $bus = new Bus;
 
 
         if($bus->countSeats($trip->id) > $trip->capacity){

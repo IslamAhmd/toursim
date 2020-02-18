@@ -16,7 +16,7 @@ class CreateHrsTable extends Migration
         Schema::create('hrs', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name')->unique();
-            // $table->string('password');
+            $table->string('password');
             $table->unsignedBigInteger('company_id');
             $table->string('company_name')->nullable();
             $table->unsignedBigInteger('user_id');

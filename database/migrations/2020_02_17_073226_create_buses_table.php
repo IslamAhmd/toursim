@@ -15,11 +15,11 @@ class CreateBusesTable extends Migration
     {
         Schema::create('buses', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->unsignedBigInteger('client_id');
+            $table->unsignedBigInteger('client_id')->nullable();
             $table->string('client_name')->nullable();
-            $table->unsignedBigInteger('trip_id');
-            $table->unsignedInteger('num')->default(0);
-            $table->json('accomodation');
+            $table->unsignedBigInteger('trip_id')->nullable();
+            $table->unsignedInteger('num');
+            $table->json('accomodation')->nullable();
             $table->timestamps();
 
             $table->foreign('client_id')->references('id')->on('clients')->onDelete('cascade');

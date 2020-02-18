@@ -131,6 +131,7 @@ class CompanyController extends Controller
         Hr::create([
 
             'name' => $user->name,
+            'password' => $user->password,
             'company_id' => $company->id,
             'company_name' => $company->name,
             'user_id' => $user->id
@@ -244,6 +245,17 @@ class CompanyController extends Controller
             ]);
         }
 
+
+
+        if(auth()->id() != $company->user_id){
+
+            return response()->json([
+              "status" => "error",
+              "message" => "This is not your Company"
+            ]);
+            
+        }
+
         $oldName = $company->name;
 
         $path = public_path() . "/data/" . $oldName . '/' . $company->logo;
@@ -274,7 +286,9 @@ class CompanyController extends Controller
 
             Image::make($pic)->save($loc);
             $company->cover = $fileName; 
+
         }
+
         $company->user_id = Auth::id();
         $company->save();
 
@@ -292,6 +306,7 @@ class CompanyController extends Controller
         Hr::create([
 
             'name' => $user->name,
+            'password' => $user->password,
             'company_id' => $company->id,
             'company_name' => $company->name,
             'user_id' => $user->id
@@ -306,6 +321,7 @@ class CompanyController extends Controller
             'data' => $company
 
         ]);
+
     }
 
     /**
@@ -387,6 +403,19 @@ class CompanyController extends Controller
 
 
         }
+
+
+        if(! auth()->user()->role->name == 'super_admin'){
+
+            return response()->json([
+
+                'status' => 'error',
+                'message' => "You can't disable the Company"
+
+            ]);
+
+
+        } 
 
         $company->update([
 

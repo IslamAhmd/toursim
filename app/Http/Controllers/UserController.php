@@ -24,9 +24,7 @@ class UserController extends Controller
                  ]);
             }
 
-
             if (Auth::attempt($credentials)) {
-
 
                     if (Company::where('user_id', $user->id)->exists()) {
                         

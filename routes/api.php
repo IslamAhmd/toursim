@@ -27,7 +27,7 @@ Route::group(['middleware' => ['jwt.verify']], function() {
 	Route::resource('/company', 'CompanyController')->except(['create', 'edit']);
 	Route::get('/getcompany', 'CompanyController@getCompany');
 	Route::post('/company/{id}/disable', 'CompanyController@disable')->middleware('SuperAdmin');
-	Route::resource('/trip', 'TripController')->except(['create', 'edit'])->middleware(['Admin']);
+	Route::resource('/trip', 'TripController')->except(['create', 'edit']);
 	Route::get('/trips', 'TripController@getTrips');
 	Route::post('/trip/{id}/cooperate', 'TripController@cooperate')->middleware(['Admin']);
 	Route::get('/trip/{tripId}/destination/{destId}/accomodations', 'TripController@accomodations')->middleware(['Admin']);
