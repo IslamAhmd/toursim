@@ -65,8 +65,7 @@ class Kernel extends HttpKernel
         'jwt.verify' => \App\Http\Middleware\JwtMiddleware::class,
         'SuperAdmin' => \App\Http\Middleware\SuperAdmin::class,
         'Admin' => \App\Http\Middleware\Admin::class,
-        'SuperOrAdmin' => \App\Http\Middleware\SuperOrAdminMiddleware::class,
-        'CheckUser' => \App\Http\Middleware\CheckUserMiddleware::class,
+        'SuperOrAdmin' => \App\Http\Middleware\SuperOrAdminMiddleware::class
 
     ];
 
