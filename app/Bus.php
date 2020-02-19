@@ -18,6 +18,7 @@ class Bus extends Model
     public function countSeats($id){
 
     	return $this->where('trip_id', $id)
+                    ->where('client_id', '!=', null)
     				->count();
 
     }
@@ -25,4 +26,5 @@ class Bus extends Model
     public function clients(){
     	return $this->hasMany('App\Client');
     }
+    
 }

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Trip;
 use App\User;
 use App\Company;
+use App\Bus;
 use App\Destination;
 use App\TripProgram;
 use Illuminate\Support\Facades\Auth;
@@ -25,9 +26,7 @@ class TripController extends Controller
 
     public function __construct(){
 
-        // $this->middleware('SuperOrAdmin')->only(['index', 'getCompany', 'show']);
         $this->middleware('Admin')->only(['store', 'update', 'destroy', 'cooperate']);
-        // $this->middleware('SuperAdmin')->only(['destroy', 'disable']);
 
     }
 
@@ -200,6 +199,23 @@ class TripController extends Controller
 
             }
         }
+
+
+        $busArr = range(1, 49);
+
+        foreach ($busArr as $b) {
+            
+            Bus::create([
+
+
+                'num' => $b,
+                'trip_id' => $trip->id              
+
+
+            ]);
+
+        }
+
 
         $trip = $trip->with(['destinations', 'programs'])->find($trip->id);
 
@@ -452,11 +468,11 @@ class TripController extends Controller
 
         ];
 
-	$messages = [
+	   $messages = [
 
-		'users.*.exists' => 'the selected user does not exist'
+		  'users.*.exists' => 'the selected user does not exist'
 	
-	];
+	   ];
 
         $validator = Validator::make($request->all(), $rules, $messages);
 

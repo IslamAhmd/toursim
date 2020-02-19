@@ -18,8 +18,6 @@ class Trip extends Model
 
     ];
 
-
-
     protected $hidden = ['user_id'];
 
     public function destinations(){
@@ -36,6 +34,10 @@ class Trip extends Model
 
     public function user(){
     	return $this->belongsTo('App\Trip');
+    }
+
+    public function bus(){
+        return $this->hasOne('App\Bus');
     }
 
 

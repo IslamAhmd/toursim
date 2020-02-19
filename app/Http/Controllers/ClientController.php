@@ -26,25 +26,10 @@ class ClientController extends Controller
 
     }
 
-    public function buses(){
-
-
-        $buses = Bus::get();
-
-        return response()->json([
-
-            'status' => 'success',
-            'data' => $buses
-
-        ]);
-
-    }
-
-
 
     public function getBuses($id){
 
-        $buses = Bus::where('trip_id', $id)->get(['client_name', 'num', 'accomodation']);
+        $buses = Bus::where('trip_id', $id)->get();
 
         return response()->json([
 
@@ -145,6 +130,8 @@ class ClientController extends Controller
             'dests.*.name.required_if' => 'the destination name field is required if the trips type is individual',
             'dests.*.arrival_date.required_if' => 'the destination arrival date field is required if the trips type is individual',
             'dests.*.departure_date.required_if' => 'the destination departure date field is required if the trips type is individual',
+            'seats_numbers.*.exists' => 'this seat number does not exist in the bus',
+            'seats_numbers.*.integer' => 'this seat must be number',
 
         ];
 
@@ -173,14 +160,23 @@ class ClientController extends Controller
         // $client->trip_name = Trip::where('id', $request->trip_id)->first()->name;
         $client->save();
 
+
         if($client->trip_type == 'groups' || $client->trip_type == 'individual'){
+
+            $trip = new Trip;
+
+            if($client->trip_type == 'groups'){
+
+                $tripName = $trip->where('id', $client->trip_id)->first()->name;
+
+            }
 
             $dests = $request->dests;
 
             foreach ((array) $dests as $dest) {
                 ClientInfo::create([
 
-                    'dest_name' => isset($dest['name'])? $dest['name'] : null,
+                    'dest_name' => isset($dest['name'])? $dest['name'] : $tripName,
                     'client_id' => $client->id,
                     'arrival_date' => isset($dest['arrival_date'])? $dest['arrival_date']:null,
                     'departure_date' => isset($dest['departure_date'])? $dest['departure_date']:null,
@@ -199,16 +195,13 @@ class ClientController extends Controller
 
             $trip = $trip->where('id', $client->trip_id)->first();
 
-            $bus = new Bus;
-
-
             $seatsArr = $client->seats_numbers;
             foreach ((array) $seatsArr as $seat) {
                 
-                $bus->where('num', $seat)->update([
+                Bus::where('num', $seat)
+                    ->where('trip_id', $trip->id)->update([
 
                     'client_id' => $client->id,
-                    'trip_id' => $trip->id,
                     'client_name' => $client->name,
                     'accomodation' => $client->infos()->pluck('accomodation')
 
@@ -216,8 +209,10 @@ class ClientController extends Controller
 
             }
 
+            $bus = new Bus;
 
-            if($bus->countSeats($trip->id) > $trip->capacity){
+            
+            if(count($seatsArr) > (49 - $bus->countSeats($trip->id))){
 
                 return response()->json([
                   "status" => "error",
@@ -227,6 +222,7 @@ class ClientController extends Controller
 
 
             }
+
 
             $remain_chairs = $trip->capacity - $bus->countSeats($trip->id);
 
@@ -358,6 +354,8 @@ class ClientController extends Controller
             'dests.*.name.required_if' => 'the destination name field is required if the trips type is individual',
             'dests.*.arrival_date.required_if' => 'the destination arrival date field is required if the trips type is individual',
             'dests.*.departure_date.required_if' => 'the destination departure date field is required if the trips type is individual',
+            'seats_numbers.*.exists' => 'this seat number does not exist in the bus',
+            'seats_numbers.*.integer' => 'this seat must be number',
 
         ];
 
@@ -373,7 +371,29 @@ class ClientController extends Controller
             ]);
         }
 
-        $oldSeatsTotal = $client->total_seats;
+
+        $trip = new Trip;
+        $bus = new Bus;
+
+        if($client->trip_type != 'individual'){
+
+
+            $trip = $trip->where('id', $client->trip_id)->first();
+
+            $seatsArr = $client->seats_numbers;
+            foreach ((array) $seatsArr as $seat) {
+                
+                $bus->where('num', $seat)
+                    ->where('trip_id', $trip->id)->update([
+
+                    'client_id' => null,
+                    'client_name' => null,
+                    'accomodation' => null
+
+                ]);
+
+            }
+        }
 
 
         $client->update($request->except('dests'));
@@ -383,7 +403,7 @@ class ClientController extends Controller
         $client->quad = 4 * $request->quad;
         $client->total_rooms = $request->single + $request->double + $request->triple + $request->quad;
         $client->total_people = $client->single + $client->double + $client->triple + $client->quad + $client->child + $client->adult + $client->infant;
-        $client->seats_no = $client->total_people - 1;
+        $client->seats_no = $client->total_people - $client->infant;
         $client->total_seats = $client->seats_no + $client->extra_seats;
         $client->save();
 
@@ -391,12 +411,19 @@ class ClientController extends Controller
 
         if($client->trip_type == 'groups' || $client->trip_type == 'individual'){
 
+
+            if($client->trip_type == 'groups'){
+
+                $tripName = $trip->where('id', $client->trip_id)->first()->name;
+
+            }
+
             $client->infos()->delete();
             $dests = $request->dests;
             foreach ((array) $dests as $dest) {
                 ClientInfo::create([
 
-                    'dest_name' => isset($dest['name'])? $dest['name'] : null,
+                    'dest_name' => isset($dest['name'])? $dest['name'] : $tripName,
                     'client_id' => $client->id,
                     'arrival_date' => isset($dest['arrival_date'])? $dest['arrival_date']:null,
                     'departure_date' => isset($dest['departure_date'])? $dest['departure_date']:null,
@@ -409,8 +436,6 @@ class ClientController extends Controller
         
         }
 
-        
-        $trip = new Trip;
 
 
         if($client->trip_type != 'individual'){
@@ -418,17 +443,13 @@ class ClientController extends Controller
 
             $trip = $trip->where('id', $client->trip_id)->first();
 
-            $bus = new Bus;
-
-            $bus->where('client_id', $client->id)->delete();
-
             $seatsArr = $client->seats_numbers;
             foreach ((array) $seatsArr as $seat) {
                 
-                $bus->where('num', $seat)->update([
+                $bus->where('num', $seat)
+                    ->where('trip_id', $trip->id)->update([
 
                     'client_id' => $client->id,
-                    'trip_id' => $trip->id,
                     'client_name' => $client->name,
                     'accomodation' => $client->infos()->pluck('accomodation')
 
@@ -437,7 +458,7 @@ class ClientController extends Controller
             }
 
 
-            if($bus->countSeats($trip->id) > $trip->capacity){
+            if(count($seatsArr) > (49 - $bus->countSeats($trip->id))){
 
                 return response()->json([
                   "status" => "error",
@@ -447,7 +468,6 @@ class ClientController extends Controller
 
 
             }
-
 
             $remain_chairs = $trip->capacity - $bus->countSeats($trip->id);        
 
