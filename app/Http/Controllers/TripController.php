@@ -126,7 +126,24 @@ class TripController extends Controller
 
         ];
 
-        $validator = Validator::make($request->all(), $rules);
+        $messages = [
+
+
+            'dests.required_if' => 'destinations are required if the trip is groups',
+            'dests.*.arrival_date.required_if' => 'the destination arrival date is required if the trip is groups',
+            'dests.*.arrival_date.date' => 'the destination arrival date must be date',
+            'dests.*.departure_date' => 'the destination arrival date is required if the trip is groups',
+            'dests.*.departure_date' => 'the destination departure date must be date',
+            'dests.*.accomodation' => 'the destination accomodation is required if the trip is groups',
+            'programs' => 'the trip program is required',
+            'programs.*.date.date' => 'the program date must be date',
+            'programs.*.date.required' => 'the program date is required',
+            'programs.*.items.*.time.required' => 'the program time is required',
+            'programs.*.items.*.desc.required' => 'the program description is required',
+
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
 
         if($validator->fails()){
 
@@ -274,7 +291,25 @@ class TripController extends Controller
 
         ];
 
-        $validator = Validator::make($request->all(), $rules);
+        $messages = [
+
+
+            'dests.required_if' => 'destinations are required if the trip is groups',
+            'dests.*.arrival_date.required_if' => 'the destination arrival date is required if the trip is groups',
+            'dests.*.arrival_date.date' => 'the destination arrival date must be date',
+            'dests.*.departure_date' => 'the destination arrival date is required if the trip is groups',
+            'dests.*.departure_date' => 'the destination departure date must be date',
+            'dests.*.accomodation' => 'the destination accomodation is required if the trip is groups',
+            'programs' => 'the trip program is required',
+            'programs.*.date.date' => 'the program date must be date',
+            'programs.*.date.required' => 'the program date is required',
+            'programs.*.items.*.time.required' => 'the program time is required',
+            'programs.*.items.*.desc.required' => 'the program description is required',
+
+        ];
+
+
+        $validator = Validator::make($request->all(), $rules, $messages);
 
         if($validator->fails()){
 
@@ -413,11 +448,17 @@ class TripController extends Controller
         $user = new User;
         $rules = [
 
-            'users.*.user' => 'exists:users,name'
+            'users.*' => 'exists:users,name'
 
         ];
 
-        $validator = Validator::make($request->all(), $rules);
+	$messages = [
+
+		'users.*.exists' => 'the selected user does not exist'
+	
+	];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
 
         if($validator->fails()){
 
@@ -426,7 +467,7 @@ class TripController extends Controller
               "errors" => $validator->errors()
             ]);
         }
-
+	
 
         if(auth()->id() == $trip->user_id){
 

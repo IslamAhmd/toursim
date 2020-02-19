@@ -26,6 +26,21 @@ class ClientController extends Controller
 
     }
 
+    public function buses(){
+
+
+        $buses = Bus::get();
+
+        return response()->json([
+
+            'status' => 'success',
+            'data' => $buses
+
+        ]);
+
+    }
+
+
 
     public function getBuses($id){
 

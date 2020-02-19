@@ -73,6 +73,7 @@ class UserController extends Controller
         	'fees' => 'integer'
     	];
 
+
     	$validator = Validator::make($request->all(), $rules);
 
         if($validator->fails()){

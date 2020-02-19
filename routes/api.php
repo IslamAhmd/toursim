@@ -34,6 +34,8 @@ Route::group(['middleware' => ['jwt.verify']], function() {
 	Route::resource('/client', 'ClientController')->except(['create', 'edit']);
 	Route::get('getseats', 'ClientController@getseats');
 	Route::get('/trip/{id}/buses', 'ClientController@getBuses');
+	Route::get('/buses', 'ClientController@buses');
+
 
 
 });
