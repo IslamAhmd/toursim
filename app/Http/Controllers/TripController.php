@@ -152,7 +152,14 @@ class TripController extends Controller
             ]);
         }
 
+        if(! Company::where('user_id', Auth::id())->exists()){
 
+            return response()->json([
+              "status" => "error",
+              "message" => "Please Create Your Company First"
+            ]);
+
+        }
         // add new trip
         $trip = Trip::create($request->except(['dests', 'programs']));
         $trip->user_id = Auth::id();
@@ -246,6 +253,8 @@ class TripController extends Controller
             ]);
         }
 
+        $this->authorize('view', $trip);
+
 
         foreach ($trip['destinations'] as $i => $dest) {
 
@@ -279,6 +288,9 @@ class TripController extends Controller
 
             ]);
         }
+
+
+        $this->authorize('update', $trip);
 
         $rules = [
 
@@ -335,75 +347,76 @@ class TripController extends Controller
             ]);
         }
 
-        if(auth()->id() == $trip->user_id){
+        if(! Company::where('user_id', Auth::id())->exists()){
+
+            return response()->json([
+              "status" => "error",
+              "message" => "Please Create Your Company First"
+            ]);
+
+        }
+
+
+
 
             // update trip
-            $trip->update($request->except(['dests', 'programs']));
-            $trip->user_id = Auth::id();
-            $trip->company_id = Company::where('user_id', $trip->user_id)->first()->id;
-            $trip->company_name = Company::where('id', $trip->company_id)->first()->name;
-            $trip->save();
+        $trip->update($request->except(['dests', 'programs']));
+        $trip->user_id = Auth::id();
+        $trip->company_id = Company::where('user_id', $trip->user_id)->first()->id;
+        $trip->company_name = Company::where('id', $trip->company_id)->first()->name;
+        $trip->save();
 
-            // add new destinations to trip
-            $trip->destinations()->delete();
+        // add new destinations to trip
+        $trip->destinations()->delete();
 
-            $dests = isset($request->dests)? $request->dests : null;
+        $dests = isset($request->dests)? $request->dests : null;
 
-            foreach ((array) $dests as $dest) {
+        foreach ((array) $dests as $dest) {
 
-                Destination::create([
+            Destination::create([
+
+                'trip_id' => $trip->id,
+                'arrival_date' => isset($dest['arrival_date']) ? $dest['arrival_date'] : null,
+                'departure_date' => isset($dest['departure_date']) ? $dest['departure_date'] : null,
+                'accomodation' => isset($dest['accomodation']) ? $dest['accomodation'] : null
+
+            ]);
+
+        }
+
+
+        // add new program to trip
+        $trip->programs()->delete();
+
+        $programs = isset($request->programs)? $request->programs : null;
+               
+        foreach ((array) $programs as $program) {
+                    
+            $date = $program['date'];
+            $times = $program['items'];
+                    
+            foreach ((array) $times as $time) {
+                        
+                TripProgram::create([
 
                     'trip_id' => $trip->id,
-                    'arrival_date' => isset($dest['arrival_date']) ? $dest['arrival_date'] : null,
-                    'departure_date' => isset($dest['departure_date']) ? $dest['departure_date'] : null,
-                    'accomodation' => isset($dest['accomodation']) ? $dest['accomodation'] : null
+                    'trip_date' => $date,
+                    'trip_time' => isset($time['time']) ? $time['time']:null,
+                    'desc' => isset($time['desc']) ? $time['desc'] : null
 
                 ]);
 
             }
-
-
-            // add new program to trip
-            $trip->programs()->delete();
-
-            $programs = isset($request->programs)? $request->programs : null;
-               
-            foreach ((array) $programs as $program) {
-                    
-                $date = $program['date'];
-                $times = $program['items'];
-                    
-                foreach ((array) $times as $time) {
-                        
-                    TripProgram::create([
-
-                        'trip_id' => $trip->id,
-                        'trip_date' => $date,
-                        'trip_time' => isset($time['time']) ? $time['time']:null,
-                        'desc' => isset($time['desc']) ? $time['desc'] : null
-
-                    ]);
-
-                }
-            }
-
-            $trip = $trip->with(['destinations', 'programs'])->find($trip->id);
-
-
-            return response()->json([
-
-                'status' => 'success',
-                'data' => $trip
-
-            ]);
-
-
         }
-        
-        
+
+        $trip = $trip->with(['destinations', 'programs'])->find($trip->id);
+
+
         return response()->json([
-            "status" => "error",
-            "message" => "This is not your Trip"
+
+            'status' => 'success',
+            'data' => $trip
+
         ]);
         
 
@@ -426,6 +439,8 @@ class TripController extends Controller
 
             ]);
         }
+
+        $this->authorize('delete', $trip);
 
         if(auth()->id() == $trip->user_id){
 
@@ -461,6 +476,8 @@ class TripController extends Controller
             ]);
         }
 
+        $this->authorize('cooperate', $trip);
+
         $user = new User;
         $rules = [
 
@@ -485,32 +502,22 @@ class TripController extends Controller
         }
 	
 
-        if(auth()->id() == $trip->user_id){
-
-            $trip->update([
-
-                'users' => $request->users
-
-            ]);
 
 
-            $trip = $trip->with(['destinations', 'programs'])->find($trip->id);
+        $trip->update([
+
+            'users' => $request->users
+
+        ]);
+
+
+        $trip = $trip->with(['destinations', 'programs'])->find($trip->id);
 
             
-            return response()->json([
-
-                'status' => 'success',
-                'data' => $trip
-
-            ]);
-
-        }
-
-
         return response()->json([
 
-            "status" => "error",
-            "message" => "This is not your Trip"
+            'status' => 'success',
+            'data' => $trip
 
         ]);
 

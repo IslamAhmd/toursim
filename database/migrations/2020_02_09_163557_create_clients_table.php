@@ -17,6 +17,7 @@ class CreateClientsTable extends Migration
             $table->bigIncrements('id');
             $table->string('trip_type');
             $table->unsignedBigInteger('trip_id')->nullable();
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->date('date');
             $table->string('name');
             $table->unsignedInteger('contact_num');
@@ -43,7 +44,7 @@ class CreateClientsTable extends Migration
             $table->timestamps();
 
             $table->foreign('trip_id')->references('id')->on('trips')->onDelete('cascade');
-
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
 
         });
     }

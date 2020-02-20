@@ -8,6 +8,7 @@ use App\ClientInfo;
 use App\Trip;
 use App\Bus;
 use Validator;
+use Illuminate\Support\Facades\Auth;
 
 
 class ClientController extends Controller
@@ -97,6 +98,7 @@ class ClientController extends Controller
             'triple' => 'integer',
             'quad' => 'integer',
             // 'total_rooms' => 'integer|required_unless:trip_type,dayuse',
+            'adult' => 'integer|required_if:trip_type,dayuse',
             'child' => 'integer',
             'infant' => 'integer',
             // 'total_people' => 'integer',
@@ -147,13 +149,14 @@ class ClientController extends Controller
     
 
         $client = Client::create($request->except('dests'));
+        $client->user_id = Auth::id();
         $client->single = 1 * $request->single;
         $client->double = 2 * $request->double;
         $client->triple = 3 * $request->triple;
         $client->quad = 4 * $request->quad;
         $client->total_rooms = $request->single + $request->double + $request->triple + $request->quad;
-        $client->adult = $client->single + $client->double + $client->triple + $client->quad;
-        $client->total_people = $client->single + $client->double + $client->triple + $client->quad + $client->child + $client->infant;
+        $client->adult = isset($request->adult)? $request->adult : $client->single + $client->double + $client->triple + $client->quad;
+        $client->total_people = $client->adult + $client->child + $client->infant;
 
         $client->seats_no = $client->total_people - $client->infant;
         $client->total_seats = $client->seats_no + $client->extra_seats;
@@ -254,7 +257,6 @@ class ClientController extends Controller
     }
 
     
-
     /**
      * Display the specified resource.
      *
@@ -275,6 +277,8 @@ class ClientController extends Controller
             ]);
 
         }
+
+        $this->authorize('view', $client);
 
         return response()->json([
 
@@ -307,6 +311,8 @@ class ClientController extends Controller
 
         }
 
+        $this->authorize('update', $client);
+
         $rules = [
 
             'trip_type' => 'required',
@@ -321,6 +327,7 @@ class ClientController extends Controller
             'triple' => 'integer',
             'quad' => 'integer',
             // 'total_rooms' => 'integer|required_unless:trip_type,dayuse',
+            'adult' => 'integer|required_if:trip_type,dayuse',
             'child' => 'integer',
             'infant' => 'integer',
             // 'total_people' => 'integer',
@@ -396,13 +403,14 @@ class ClientController extends Controller
 
 
         $client->update($request->except('dests'));
+        $client->user_id = Auth::id();
         $client->single = 1 * $request->single;
         $client->double = 2 * $request->double;
         $client->triple = 3 * $request->triple;
         $client->quad = 4 * $request->quad;
         $client->total_rooms = $request->single + $request->double + $request->triple + $request->quad;
-        $client->adult = $client->single + $client->double + $client->triple + $client->quad;
-        $client->total_people = $client->single + $client->double + $client->triple + $client->quad + $client->child + $client->infant;
+        $client->adult = isset($request->adult)? $request->adult : $client->single + $client->double + $client->triple + $client->quad;
+        $client->total_people = $client->adult + $client->child + $client->infant;
         $client->seats_no = $client->total_people - $client->infant;
         $client->total_seats = $client->seats_no + $client->extra_seats;
         $client->save();
@@ -517,6 +525,8 @@ class ClientController extends Controller
             ]);
 
         }
+
+        $this->authorize('delete', $client);
 
         $client->delete();
 

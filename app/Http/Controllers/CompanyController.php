@@ -63,7 +63,8 @@ class CompanyController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
-    {
+    {   
+
         $rules = [
 
             'name' => 'required|unique:companies',
@@ -157,8 +158,10 @@ class CompanyController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function show($id)
-    {
+    {   
+
         $company = Company::with('hr')->find($id);
+
 
         if(! $company){
 
