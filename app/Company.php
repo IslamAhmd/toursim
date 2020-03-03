@@ -17,5 +17,9 @@ class Company extends Model
     public function hr(){
     	return $this->hasOne('App\Hr');
     }
-    
+
+    public function visas(){
+    	return $this->hasMany('App\Visa');
+    }
+
 }

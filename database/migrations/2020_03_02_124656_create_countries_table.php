@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateDestinationsTable extends Migration
+class CreateCountriesTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,16 +13,10 @@ class CreateDestinationsTable extends Migration
      */
     public function up()
     {
-        Schema::create('destinations', function (Blueprint $table) {
+        Schema::create('countries', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->unsignedBigInteger('trip_id');
-            $table->date('arrival_date');
-            $table->date('departure_date');
-            $table->json('accomodation');
+            $table->string('name');
             $table->timestamps();
-
-            $table->foreign('trip_id')->references('id')->on('trips')->onDelete('cascade');
-
         });
     }
 
@@ -33,6 +27,6 @@ class CreateDestinationsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('destinations');
+        Schema::dropIfExists('countries');
     }
 }

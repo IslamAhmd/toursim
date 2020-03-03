@@ -15,12 +15,15 @@ class CreateClientsTable extends Migration
     {
         Schema::create('clients', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->string('trip_genre');
             $table->string('trip_type');
             $table->unsignedBigInteger('trip_id')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->date('date');
             $table->string('name');
             $table->unsignedInteger('contact_num');
+            $table->unsignedInteger('passport_num')->nullable();
+            $table->string('nationality')->nullable();
             $table->string('category');
             $table->string('travel_agency');
             $table->unsignedInteger('single')->default(0);
@@ -35,7 +38,7 @@ class CreateClientsTable extends Migration
             $table->unsignedInteger('seats_no')->default(0);
             $table->unsignedInteger('extra_seats')->default(0);
             $table->unsignedInteger('total_seats')->default(0);
-            $table->json('seats_numbers');
+            $table->json('seats_numbers')->nullable();
             $table->string('booking');
             $table->string('seats');
             $table->string('status');

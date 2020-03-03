@@ -14,8 +14,9 @@ class Trip extends Model
     	'guides' => 'array',
     	'accomodations' => 'array',
     	'users' => 'array',
-        'Destinations' => 'array'
-
+        'Destinations' => 'array',
+        'domestic_trans' => 'array'
+        
     ];
 
     protected $hidden = ['user_id'];

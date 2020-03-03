@@ -23,6 +23,30 @@ class Bus extends Model
 
     }
 
+
+    public function checkSeats(Array $seatsArr, $tripId){
+
+        foreach ($seatsArr as $seat) {
+            
+            if($this->where('num', $seat)->where('trip_id', $tripId)->exists()){
+
+                $clientId = $this->where('num', $seat)
+                            ->where('trip_id', $tripId)->first()->client_id;
+
+                if($clientId != null){
+                    return true;
+                }
+
+                return false;
+
+            }
+
+            return false;
+
+        }
+
+    }
+
     public function clients(){
     	return $this->hasMany('App\Client');
     }

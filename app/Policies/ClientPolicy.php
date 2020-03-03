@@ -21,6 +21,11 @@ class ClientPolicy
         //
     }
 
+    public function getNames(User $user, Client $client){
+
+        return $user->id() === $client->user_id;
+
+    }
     /**
      * Determine whether the user can view the client.
      *

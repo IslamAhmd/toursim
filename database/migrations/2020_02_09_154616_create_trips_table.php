@@ -15,10 +15,13 @@ class CreateTripsTable extends Migration
     {
         Schema::create('trips', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->string('trip_genre');
             $table->string('trip_type');
             $table->string('group_name');
             $table->string('group_type');
             $table->string('group_desc');
+            $table->string('country')->nullable();
+            $table->json('domestic_trans')->nullable();
             $table->json('transportations');
             $table->json('guides');
             $table->json('Destinations');

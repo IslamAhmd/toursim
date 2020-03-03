@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Client;
+use App\Company;
 use App\ClientInfo;
 use App\Trip;
 use App\Bus;
@@ -21,16 +22,31 @@ class ClientController extends Controller
 
     public function __construct(){
 
-        // $this->middleware('SuperOrAdmin')->only(['index', 'getCompany', 'show']);
+        
         $this->middleware('Admin');
-        // $this->middleware('SuperAdmin')->only(['destroy', 'disable']);
-
+        
     }
 
+    // public function getNames($tripId){
 
-    public function getBuses($id){
+    //     $clients = Client::where('trip_id', $tripId)->get(['id', 'name', 'passport_num']);
 
-        $buses = Bus::where('trip_id', $id)->get();
+    //     $this->authorize('getNames', $clients);
+
+    //     return response()->json([
+
+    //         'status' => 'success',
+    //         'data' => $clients
+
+    //     ]);
+
+    // }
+
+    public function getBuses($tripId){
+
+        $trip = Trip::where('user_id', Auth::id())->findOrFail($tripId);
+
+        $buses = Bus::where('trip_id', $trip->id)->get();
 
         return response()->json([
 
@@ -42,11 +58,29 @@ class ClientController extends Controller
     }
 
 
-    public function index()
+    public function index($companyId)
     {
-        $groupsClients = Client::with('infos')->where('trip_type', 'groups')->get();
-        $dayuseClients = Client::with('infos')->where('trip_type', 'dayuse')->get();
-        $individualClients = Client::with('infos')->where('trip_type', 'individual')->get();
+
+        $trips = Trip::where('user_id', Auth::id())
+                    ->where('company_id', $companyId)
+                    ->get();
+
+        $groupsClients = Client::with('infos')->whereIn('trip_id', $trips->pluck('id'))
+                                ->where('trip_type', 'groups')
+                                ->where('trip_genre', 'domestic')->get();
+        $dayuseClients = Client::with('infos')->whereIn('trip_id', $trips->pluck('id'))
+                                ->where('trip_type', 'dayuse')->get();
+        $individualClients = Client::with('infos')
+                                    ->where('trip_type', 'individual')
+                                    ->where('trip_genre', 'domestic')->get();
+
+        $outgoinggroupsClients = Client::with('infos')->whereIn('trip_id', $trips->pluck('id'))
+                                ->where('trip_type', 'groups')
+                                ->where('trip_genre', 'outgoing')->get();
+
+        $outgoingindividualClients = Client::with('infos')
+                                    ->where('trip_type', 'individual')
+                                    ->where('trip_genre', 'outgoing')->get();
 
 
         return response()->json([
@@ -56,16 +90,24 @@ class ClientController extends Controller
 
                 'groups' => $groupsClients,
                 'dayuse' => $dayuseClients,
-                'individual' => $individualClients
+                'individual' => $individualClients,
+                'outgoingGroups' => $outgoinggroupsClients,
+                'outgoingIndividual' => $outgoingindividualClients
 
             ]
 
         ]);
     }
 
-    public function getseats(){
+    public function getseats($companyId){
 
-        $clients = Client::get(['id', 'name', 'seats_numbers']);
+        $trip = Trip::where('user_id', Auth::id())
+                    ->where('company_id', $companyId)
+                    ->firstOrFail();
+
+
+        $clients = Client::where('trip_id', $trip->id)
+                        ->get(['id', 'name', 'seats_numbers']);
 
         return response()->json([
 
@@ -86,11 +128,14 @@ class ClientController extends Controller
     {
         $rules = [
 
+            'trip_genre' => 'required',
             'trip_type' => 'required',
             'trip_id' => 'exists:trips,id',
             'date' => 'required|date',
             'name' => 'required',
             'contact_num' => 'required|integer',
+            'passport_num' => 'required_if:trip_genre,outgoing',
+            'nationality' => 'required_if:trip_genre,outgoing',
             'category' => 'required',
             'travel_agency' => 'required',
             'single' => 'integer',
@@ -105,7 +150,7 @@ class ClientController extends Controller
             // 'seats_no' => 'integer|required_unless:trip_type,individual',
             'extra_seats' => 'integer',
             // 'total_seats' => 'integer|required_unless:trip_type,individual',
-            'seats_numbers' => 'required',
+            'seats_numbers' => 'required_unless:trip_type,individual',
             'seats_numbers.*' => 'integer|exists:buses,num',
             'booking' => 'required',
             'seats' => 'required',
@@ -114,8 +159,8 @@ class ClientController extends Controller
             'notes' => 'required',
             'dests' => 'required_unless:trip_type,dayuse',
             'dests.*.name' => 'required_if:trip_type,individual',
-            'dests.*.arrival_date' => 'date|required_if:trip_type,individual',
-            'dests.*.departure_date' => 'date|required_if:trip_type,individual',
+            'dests.*.arrival_date' => 'date|required_if:trip_type,individual|before_or_equal:departure_date',
+            'dests.*.departure_date' => 'date|required_if:trip_type,individual|after_or_equal:arrival_date',
             'dests.*.accomodation' => 'required_unless:trip_type,dayuse',
             'dests.*.room_category' => 'required_unless:trip_type,dayuse',
             'dests.*.meal_plan' => 'required_unless:trip_type,dayuse',
@@ -133,6 +178,9 @@ class ClientController extends Controller
             'dests.*.departure_date.required_if' => 'the destination departure date field is required if the trips type is individual',
             'seats_numbers.*.exists' => 'this seat number does not exist in the bus',
             'seats_numbers.*.integer' => 'this seat must be number',
+            'passport_num.required_if' => 'the passport number is required if the trip is outgoing',
+            'nationality.required_if' => 'the nationality is required if the trip is outgoing',
+
 
         ];
 
@@ -146,7 +194,23 @@ class ClientController extends Controller
             ]);
         }
 
-    
+        $trip = new Trip;
+        $bus = new Bus;
+
+        if($request->trip_type != 'individual'){
+
+            if($bus->checkSeats($request->seats_numbers, $request->trip_id)){
+
+                return response()->json([
+
+                    'status' => 'error',
+                    'message' => 'This seat is booked, please enter valid seats'
+
+                ]);
+
+            }
+
+        }
 
         $client = Client::create($request->except('dests'));
         $client->user_id = Auth::id();
@@ -160,7 +224,6 @@ class ClientController extends Controller
 
         $client->seats_no = $client->total_people - $client->infant;
         $client->total_seats = $client->seats_no + $client->extra_seats;
-        // $client->trip_name = Trip::where('id', $request->trip_id)->first()->name;
         $client->save();
 
 
@@ -170,16 +233,16 @@ class ClientController extends Controller
 
             if($client->trip_type == 'groups'){
 
-                $tripName = $trip->where('id', $client->trip_id)->first()->name;
+                $destName = $trip->where('id', $client->trip_id)->first()->Destinations;
 
             }
 
             $dests = $request->dests;
 
-            foreach ((array) $dests as $dest) {
+            foreach ((array) $dests as $i => $dest) {
                 ClientInfo::create([
 
-                    'dest_name' => isset($dest['name'])? $dest['name'] : $tripName,
+                    'dest_name' => isset($dest['name'])? $dest['name'] : $destName[$i],
                     'client_id' => $client->id,
                     'arrival_date' => isset($dest['arrival_date'])? $dest['arrival_date']:null,
                     'departure_date' => isset($dest['departure_date'])? $dest['departure_date']:null,
@@ -192,13 +255,14 @@ class ClientController extends Controller
 
         }
 
-        $trip = new Trip;
 
         if($client->trip_type != 'individual'){
 
             $trip = $trip->where('id', $client->trip_id)->first();
 
             $seatsArr = $client->seats_numbers;
+
+
             foreach ((array) $seatsArr as $seat) {
                 
                 Bus::where('num', $seat)
@@ -211,8 +275,6 @@ class ClientController extends Controller
                 ]);
 
             }
-
-            $bus = new Bus;
 
             
             if(count($seatsArr) > (49 - $bus->countSeats($trip->id))){
@@ -315,11 +377,14 @@ class ClientController extends Controller
 
         $rules = [
 
+            'trip_genre' => 'required',
             'trip_type' => 'required',
             'trip_id' => 'exists:trips,id',
             'date' => 'required|date',
             'name' => 'required',
             'contact_num' => 'required|integer',
+            'passport_num' => 'required_if:trip_genre,outgoing',
+            'nationality' => 'required_if:trip_genre,outgoing',
             'category' => 'required',
             'travel_agency' => 'required',
             'single' => 'integer',
@@ -334,7 +399,7 @@ class ClientController extends Controller
             // 'seats_no' => 'integer|required_unless:trip_type,individual',
             'extra_seats' => 'integer',
             // 'total_seats' => 'integer|required_unless:trip_type,individual',
-            'seats_numbers' => 'required',
+            'seats_numbers' => 'required_unless:trip_type,individual',
             'seats_numbers.*' => 'integer|exists:buses,num',
             'booking' => 'required',
             'seats' => 'required',
@@ -362,6 +427,9 @@ class ClientController extends Controller
             'dests.*.departure_date.required_if' => 'the destination departure date field is required if the trips type is individual',
             'seats_numbers.*.exists' => 'this seat number does not exist in the bus',
             'seats_numbers.*.integer' => 'this seat must be number',
+            'passport_num.required_if' => 'the passport number is required if the trip is outgoing',
+            'nationality.required_if' => 'the nationality is required if the trip is outgoing',
+
 
         ];
 
@@ -387,6 +455,7 @@ class ClientController extends Controller
             $trip = $trip->where('id', $client->trip_id)->first();
 
             $seatsArr = $client->seats_numbers;
+
             foreach ((array) $seatsArr as $seat) {
                 
                 $bus->where('num', $seat)
@@ -399,9 +468,21 @@ class ClientController extends Controller
                 ]);
 
             }
+
+            if($bus->checkSeats($request->seats_numbers, $request->trip_id)){
+
+                return response()->json([
+
+                    'status' => 'error',
+                    'message' => 'This seat is booked, please enter valid seats'
+
+                ]);
+
+            }
+
         }
 
-
+        
         $client->update($request->except('dests'));
         $client->user_id = Auth::id();
         $client->single = 1 * $request->single;
@@ -421,16 +502,16 @@ class ClientController extends Controller
 
             if($client->trip_type == 'groups'){
 
-                $tripName = $trip->where('id', $client->trip_id)->first()->name;
+                $destName = $trip->where('id', $client->trip_id)->first()->Destinations;
 
             }
 
             $client->infos()->delete();
             $dests = $request->dests;
-            foreach ((array) $dests as $dest) {
+            foreach ((array) $dests as $i => $dest) {
                 ClientInfo::create([
 
-                    'dest_name' => isset($dest['name'])? $dest['name'] : $tripName,
+                    'dest_name' => isset($dest['name'])? $dest['name'] : $destName[$i],
                     'client_id' => $client->id,
                     'arrival_date' => isset($dest['arrival_date'])? $dest['arrival_date']:null,
                     'departure_date' => isset($dest['departure_date'])? $dest['departure_date']:null,
@@ -451,6 +532,7 @@ class ClientController extends Controller
             $trip = $trip->where('id', $client->trip_id)->first();
 
             $seatsArr = $client->seats_numbers;
+
             foreach ((array) $seatsArr as $seat) {
                 
                 $bus->where('num', $seat)

@@ -34,15 +34,28 @@ Route::group(['middleware' => ['jwt.verify']], function() {
 	Route::post('/company/{id}/disable', 'CompanyController@disable')->middleware('SuperAdmin');
 
 	
-	Route::resource('/trip', 'TripController')->except(['create', 'edit']);
-	Route::get('/trips', 'TripController@getTrips');
+	Route::resource('/trip', 'TripController')->except(['create', 'edit', 'index']);
+	Route::get('/{companyId}/trip/', 'TripController@index');
+	Route::get('/{companyId}/trips', 'TripController@getTrips');
 	Route::post('/trip/{id}/cooperate', 'TripController@cooperate');
 	Route::get('/trip/{tripId}/destination/{destId}/accomodations', 'TripController@accomodations');
 
 
 
-	Route::resource('/client', 'ClientController')->except(['create', 'edit']);
-	Route::get('getseats', 'ClientController@getseats');
-	Route::get('/trip/{id}/buses', 'ClientController@getBuses');
+	Route::resource('/client', 'ClientController')->except(['create', 'edit', 'index']);
+	Route::get('/{companyId}/client', 'ClientController@index');
+	Route::get('/{companyId}/getseats', 'ClientController@getseats');
+	Route::get('/trip/{tripId}/buses', 'ClientController@getBuses');
+	// Route::get('/trip/{tripId}/clients', 'ClientController@getNames');
+
+	Route::resource('tour', 'TourController')->except(['create', 'edit', 'index']);
+	Route::get('/{tripId}/tour', 'TourController@index');
+
+	Route::resource('visa', 'VisaController')->except(['create', 'edit']);
+	Route::get('countries', 'VisaController@countries');
+	
+
+	Route::resource('accept', 'VisaAcceptController')->except(['create', 'edit']);
+
 
 });
