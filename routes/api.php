@@ -39,7 +39,7 @@ Route::group(['middleware' => ['jwt.verify']], function() {
 	Route::get('/{companyId}/trips', 'TripController@getTrips');
 	Route::post('/trip/{id}/cooperate', 'TripController@cooperate');
 	Route::get('/trip/{tripId}/destination/{destId}/accomodations', 'TripController@accomodations');
-
+	Route::get('/nationalities', 'TripController@nationality');
 
 
 	Route::resource('/client', 'ClientController')->except(['create', 'edit', 'index']);

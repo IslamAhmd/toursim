@@ -8,6 +8,7 @@ use App\Company;
 use App\ClientInfo;
 use App\Trip;
 use App\Bus;
+use App\Companion;
 use Validator;
 use Illuminate\Support\Facades\Auth;
 
@@ -65,23 +66,34 @@ class ClientController extends Controller
                     ->where('company_id', $companyId)
                     ->get();
 
-        $groupsClients = Client::with('infos')->whereIn('trip_id', $trips->pluck('id'))
+        $groupsClients = Client::with(['infos', 'companion'])->whereIn('trip_id', $trips->pluck('id'))
                                 ->where('trip_type', 'groups')
                                 ->where('trip_genre', 'domestic')->get();
-        $dayuseClients = Client::with('infos')->whereIn('trip_id', $trips->pluck('id'))
-                                ->where('trip_type', 'dayuse')->get();
-        $individualClients = Client::with('infos')
+
+        $dayuseClients = Client::with(['infos', 'companion'])->whereIn('trip_id', $trips->pluck('id'))
+                                ->where('trip_type', 'dayuse')
+                                ->where('trip_genre', 'domestic')->get();
+
+        $individualClients = Client::with(['infos', 'companion'])
                                     ->where('trip_type', 'individual')
                                     ->where('trip_genre', 'domestic')->get();
 
-        $outgoinggroupsClients = Client::with('infos')->whereIn('trip_id', $trips->pluck('id'))
+        $outgoinggroupsClients = Client::with(['infos', 'companion'])->whereIn('trip_id', $trips->pluck('id'))
                                 ->where('trip_type', 'groups')
                                 ->where('trip_genre', 'outgoing')->get();
 
-        $outgoingindividualClients = Client::with('infos')
+        $outgoingindividualClients = Client::with(['infos', 'companion'])
                                     ->where('trip_type', 'individual')
                                     ->where('trip_genre', 'outgoing')->get();
 
+
+        $inComingGroupsClients = Client::with(['infos', 'companion'])->whereIn('trip_id', $trips->pluck('id'))
+                                ->where('trip_type', 'groups')
+                                ->where('trip_genre', 'incoming')->get();
+
+        $incomingDayuseClients = Client::with(['infos', 'companion'])->whereIn('trip_id', $trips->pluck('id'))
+                                ->where('trip_type', 'dayuse')
+                                ->where('trip_genre', 'incoming')->get();
 
         return response()->json([
 
@@ -92,7 +104,9 @@ class ClientController extends Controller
                 'dayuse' => $dayuseClients,
                 'individual' => $individualClients,
                 'outgoingGroups' => $outgoinggroupsClients,
-                'outgoingIndividual' => $outgoingindividualClients
+                'outgoingIndividual' => $outgoingindividualClients,
+                'incomingGroups' => $inComingGroupsClients,
+                'incomingDayuse' => $incomingDayuseClients
 
             ]
 
@@ -133,23 +147,19 @@ class ClientController extends Controller
             'trip_id' => 'exists:trips,id',
             'date' => 'required|date',
             'name' => 'required',
-            'contact_num' => 'required|integer',
-            'passport_num' => 'required_if:trip_genre,outgoing',
-            'nationality' => 'required_if:trip_genre,outgoing',
+            'contact_num' => 'required_unless:trip_genre,incoming|integer',
+            'passport_num' => 'required_if:trip_genre,outgoing|required_if:trip_genre,incoming',
+            'nationality' => 'required_if:trip_genre,outgoing|required_if:trip_genre,incoming',
             'category' => 'required',
             'travel_agency' => 'required',
             'single' => 'integer',
             'double' => 'integer',
             'triple' => 'integer',
             'quad' => 'integer',
-            // 'total_rooms' => 'integer|required_unless:trip_type,dayuse',
             'adult' => 'integer|required_if:trip_type,dayuse',
             'child' => 'integer',
             'infant' => 'integer',
-            // 'total_people' => 'integer',
-            // 'seats_no' => 'integer|required_unless:trip_type,individual',
             'extra_seats' => 'integer',
-            // 'total_seats' => 'integer|required_unless:trip_type,individual',
             'seats_numbers' => 'required_unless:trip_type,individual',
             'seats_numbers.*' => 'integer|exists:buses,num',
             'booking' => 'required',
@@ -159,8 +169,8 @@ class ClientController extends Controller
             'notes' => 'required',
             'dests' => 'required_unless:trip_type,dayuse',
             'dests.*.name' => 'required_if:trip_type,individual',
-            'dests.*.arrival_date' => 'date|required_if:trip_type,individual|before_or_equal:departure_date',
-            'dests.*.departure_date' => 'date|required_if:trip_type,individual|after_or_equal:arrival_date',
+            'dests.*.arrival_date' => 'date|required_if:trip_type,individual',
+            'dests.*.departure_date' => 'date|required_if:trip_type,individual',
             'dests.*.accomodation' => 'required_unless:trip_type,dayuse',
             'dests.*.room_category' => 'required_unless:trip_type,dayuse',
             'dests.*.meal_plan' => 'required_unless:trip_type,dayuse',
@@ -212,7 +222,7 @@ class ClientController extends Controller
 
         }
 
-        $client = Client::create($request->except('dests'));
+        $client = Client::create($request->except(['dests', 'comps']));
         $client->user_id = Auth::id();
         $client->single = 1 * $request->single;
         $client->double = 2 * $request->double;
@@ -301,7 +311,21 @@ class ClientController extends Controller
         }   
         
 
-        $client = $client->with(['infos'])->find($client->id);
+        $comps = isset($request->comps)? $request->comps : null;
+        foreach ((array) $comps as $comp) {
+            
+            Companion::create([
+
+                'client_id' => $client->id,
+                'name' => $comp['name'],
+                'passport_no' => $comp['passport_no'],
+                'nationality' => $comp['nationality']
+
+            ]);
+
+        }
+
+        $client = $client->with(['infos', 'companion'])->find($client->id);
 
         return response()->json([
 
@@ -327,7 +351,7 @@ class ClientController extends Controller
      */
     public function show($id)
     {
-        $client = Client::with('infos')->find($id);
+        $client = Client::with(['infos', 'companion'])->find($id);
 
         if(! $client){
 
@@ -382,23 +406,19 @@ class ClientController extends Controller
             'trip_id' => 'exists:trips,id',
             'date' => 'required|date',
             'name' => 'required',
-            'contact_num' => 'required|integer',
-            'passport_num' => 'required_if:trip_genre,outgoing',
-            'nationality' => 'required_if:trip_genre,outgoing',
+            'contact_num' => 'required_unless:trip_genre,incoming|integer',
+            'passport_num' => 'required_if:trip_genre,outgoing|required_if:trip_genre,incoming',
+            'nationality' => 'required_if:trip_genre,outgoing|required_if:trip_genre,incoming',
             'category' => 'required',
             'travel_agency' => 'required',
             'single' => 'integer',
             'double' => 'integer',
             'triple' => 'integer',
             'quad' => 'integer',
-            // 'total_rooms' => 'integer|required_unless:trip_type,dayuse',
             'adult' => 'integer|required_if:trip_type,dayuse',
             'child' => 'integer',
             'infant' => 'integer',
-            // 'total_people' => 'integer',
-            // 'seats_no' => 'integer|required_unless:trip_type,individual',
             'extra_seats' => 'integer',
-            // 'total_seats' => 'integer|required_unless:trip_type,individual',
             'seats_numbers' => 'required_unless:trip_type,individual',
             'seats_numbers.*' => 'integer|exists:buses,num',
             'booking' => 'required',
@@ -483,7 +503,7 @@ class ClientController extends Controller
         }
 
         
-        $client->update($request->except('dests'));
+        $client->update($request->except(['dests', 'comps']));
         $client->user_id = Auth::id();
         $client->single = 1 * $request->single;
         $client->double = 2 * $request->double;
@@ -568,8 +588,23 @@ class ClientController extends Controller
             ]);
 
         }
+
+        $client->companion()->delete();
+        $comps = isset($request->comps)? $request->comps : null;
+        foreach ((array) $comps as $comp) {
+            
+            Companion::create([
+
+                'client_id' => $client->id,
+                'name' => $comp['name'],
+                'passport_no' => $comp['passport_no'],
+                'nationality' => $comp['nationality']
+
+            ]);
+
+        }
         
-        $client = $client->with(['infos'])->find($client->id);
+        $client = $client->with(['infos', 'companion'])->find($client->id);
 
 
         return response()->json([

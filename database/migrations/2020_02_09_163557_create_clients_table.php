@@ -21,7 +21,7 @@ class CreateClientsTable extends Migration
             $table->unsignedBigInteger('user_id')->nullable();
             $table->date('date');
             $table->string('name');
-            $table->unsignedInteger('contact_num');
+            $table->unsignedInteger('contact_num')->nullable();
             $table->unsignedInteger('passport_num')->nullable();
             $table->string('nationality')->nullable();
             $table->string('category');

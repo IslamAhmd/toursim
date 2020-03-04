@@ -15,7 +15,9 @@ class Trip extends Model
     	'accomodations' => 'array',
     	'users' => 'array',
         'Destinations' => 'array',
-        'domestic_trans' => 'array'
+        'domestic_trans' => 'array',
+        'leaders' => 'array',
+        'nationality' => 'array'
         
     ];
 
@@ -39,6 +41,16 @@ class Trip extends Model
 
     public function bus(){
         return $this->hasOne('App\Bus');
+    }
+
+    public function setArrivalTimeAttribute($value){
+
+        $this->attributes['arrival_time'] = date("H:i", strtotime($value));
+    }
+
+    public function setDepartureTimeAttribute($value){
+
+        $this->attributes['departure_time'] = date("H:i", strtotime($value));
     }
 
 

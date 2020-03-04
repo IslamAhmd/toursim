@@ -7,6 +7,7 @@ use App\Trip;
 use App\User;
 use App\Company;
 use App\Bus;
+use App\Nationality;
 use App\Destination;
 use App\TripProgram;
 use Illuminate\Support\Facades\Auth;
@@ -30,6 +31,19 @@ class TripController extends Controller
 
     }
 
+    public function nationality(){
+
+        $nationalities = Nationality::get();
+
+        return response()->json([
+
+            'status' => 'success',
+            'data' => $nationalities
+
+        ]);
+
+    }
+
 
     public function index($companyId)
     {
@@ -37,6 +51,7 @@ class TripController extends Controller
 
         $Daytrips = Trip::with(['destinations', 'programs'])
                         ->where('company_id', $company->id)
+                        ->where('trip_genre', 'domestic')
                         ->where('trip_type', 'dayuse')->get();
 
         $Groupstrips = Trip::with(['destinations', 'programs'])
@@ -48,6 +63,16 @@ class TripController extends Controller
                             ->where('company_id', $company->id)
                             ->where('trip_genre', 'outgoing')->get();
 
+        $inComingGroups = Trip::with(['destinations', 'programs'])
+                                ->where('company_id', $company->id)
+                                ->where('trip_genre', 'incoming')
+                                ->where('trip_type', 'groups')->get();
+
+        $inComingDay = Trip::with(['destinations', 'programs'])
+                                ->where('company_id', $company->id)
+                                ->where('trip_genre', 'incoming')
+                                ->where('trip_type', 'dayuse')->get();
+
 
 
         return response()->json([
@@ -57,7 +82,9 @@ class TripController extends Controller
 
                 'dayuse' => $Daytrips,
                 'groups' => $Groupstrips,
-                'outgoing' => $outGoingtrips
+                'outgoing' => $outGoingtrips,
+                'incomingGroups' => $inComingGroups,
+                'inComingDayUse' => $inComingDay
 
             ]
 
@@ -126,16 +153,21 @@ class TripController extends Controller
             'group_type' => 'required',
             'group_desc' => 'required',
             'country' => 'required_if:trip_genre,outgoing',
-            'domestic_trans' => 'required_if:trip_genre,outgoing',
-            'transportations' => 'required',
+            'nationality' => 'required_if:trip_genre,incoming',
+            'domestic_trans' => 'required_if:trip_genre,outgoing|required_if:trip_genre,incoming',
+            'transportations' => 'required_unless:trip_genre,incoming',
             'Destinations' => 'required',
             'guides' => 'required',
-            'arrival_date' => 'required|date|before_or_equal:departure_date',
-            'departure_date' => 'required|date|after_or_equal:arrival_date',
+            'leaders' => 'required_if:trip_genre,incoming',
+            'arrival_date' => 'required',
+            'arrival_port' => 'required_if:trip_genre,incoming',
+            'arrival_time' => 'required_if:trip_genre,incoming',
+            'departure_date' => 'required',
+            'departure_port' => 'required_if:trip_genre,incoming',
+            'departure_time' => 'required_if:trip_genre,incoming',
             'capacity' => 'integer',
             'remain_chairs' => 'integer',
             'accomodations' => 'required_if:trip_type,groups',
-            // 'dests.*.name' => 'required_if:trip_type,groups',
             'dests' => 'required_if:trip_type,groups',
             'dests.*.arrival_date' => 'required_if:trip_type,groups|date',
             'dests.*.departure_date' => 'required_if:trip_type,groups|date',
@@ -188,7 +220,6 @@ class TripController extends Controller
         $trip = Trip::create($request->except(['dests', 'programs']));
         $trip->user_id = Auth::id();
         $trip->company_id = Company::where('user_id', $trip->user_id)->first()->id;
-        $trip->company_name = Company::where('id', $trip->company_id)->first()->name;
         $trip->save();
 
 
@@ -343,16 +374,21 @@ class TripController extends Controller
             'group_type' => 'required',
             'group_desc' => 'required',
             'country' => 'required_if:trip_genre,outgoing',
-            'domestic_trans' => 'required_if:trip_genre,outgoing',
-            'transportations' => 'required',
+            'nationality' => 'required_if:trip_genre,incoming',
+            'domestic_trans' => 'required_if:trip_genre,outgoing|required_if:trip_genre,incoming',
+            'transportations' => 'required_unless:trip_genre,incoming',
             'Destinations' => 'required',
             'guides' => 'required',
+            'leaders' => 'required_if:trip_genre,incoming',
             'arrival_date' => 'required',
+            'arrival_port' => 'required_if:trip_genre,incoming',
+            'arrival_time' => 'required_if:trip_genre,incoming',
             'departure_date' => 'required',
+            'departure_port' => 'required_if:trip_genre,incoming',
+            'departure_time' => 'required_if:trip_genre,incoming',
             'capacity' => 'integer',
             'remain_chairs' => 'integer',
             'accomodations' => 'required_if:trip_type,groups',
-            // 'dests.*.name' => 'required_if:trip_type,groups',
             'dests' => 'required_if:trip_type,groups',
             'dests.*.arrival_date' => 'required_if:trip_type,groups|date',
             'dests.*.departure_date' => 'required_if:trip_type,groups|date',
@@ -361,7 +397,6 @@ class TripController extends Controller
             'programs.*.date' => 'required|date',
             'programs.*.time' => 'required',
             'programs.*.desc' => 'required',
-
 
         ];
 
@@ -408,7 +443,6 @@ class TripController extends Controller
         $trip->update($request->except(['dests', 'programs']));
         $trip->user_id = Auth::id();
         $trip->company_id = Company::where('user_id', $trip->user_id)->first()->id;
-        $trip->company_name = Company::where('id', $trip->company_id)->first()->name;
         $trip->save();
 
         // add new destinations to trip
@@ -521,11 +555,11 @@ class TripController extends Controller
 
         ];
 
-	   $messages = [
+       $messages = [
 
-		  'users.*.exists' => 'the selected user does not exist'
-	
-	   ];
+          'users.*.exists' => 'the selected user does not exist'
+    
+       ];
 
         $validator = Validator::make($request->all(), $rules, $messages);
 
@@ -536,7 +570,7 @@ class TripController extends Controller
               "errors" => $validator->errors()
             ]);
         }
-	
+    
 
 
 

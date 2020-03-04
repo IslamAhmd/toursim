@@ -25,4 +25,8 @@ class Client extends Model
     	return $this->belongsTo('App\Bus');
     }
 
+    public function companion(){
+        return $this->hasMany('App\Companion');
+    }
+
 }

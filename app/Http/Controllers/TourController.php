@@ -20,13 +20,23 @@ class TourController extends Controller
     public function index($tripId)
     {
         $trip = Trip::where('user_id', Auth::id())->findOrFail($tripId);
+        
 
-        $tours = TripTour::with('client')->where('trip_id', $trip->id)->get();
+        $tours = TripTour::with('client')->where('trip_id', $trip->id)
+                                        ->where('tour_genre', 'outgoing')->get();
+        $incomingTours = TripTour::with('client')->where('trip_id', $trip->id)
+                                                ->where('tour_genre', 'incoming')->get();
+
 
         return response()->json([
 
             'status' => 'success',
-            'data' => $tours
+            'data' => [
+
+                'tours' => $tours,
+                'incomingTours' => $incomingTours 
+
+            ]
 
         ]);
 
@@ -74,9 +84,12 @@ class TourController extends Controller
                     ->where('id', $request->trip_id)->firstOrFail();
 
 
-        if($trip->trip_genre == "outgoing" && $trip->trip_type == "groups"){
+        if($trip->trip_genre == "outgoing" || $trip->trip_genre == "incoming" && $trip->trip_type == "groups"){
 
             $tour = TripTour::create($request->only(['trip_id', 'name', 'date', 'tour_leader', 'driver_name', 'mobile']));
+            $tour->tour_genre = $trip->trip_genre;
+            $tour->save();
+
             $client = TourClient::create($request->only(['client', 'passport_no', 'accomodation', 'adult', 'child', 'payment', 'notes']));
             $client->tour_id = $tour->id;
             $client->total = $client->adult + $client->child;
@@ -140,6 +153,7 @@ class TourController extends Controller
     public function update(Request $request, $id)
     {
         $tour = TripTour::with('client')->find($id);
+        $client = $tour->client()->first();
 
         if(! $tour){
 
@@ -184,9 +198,12 @@ class TourController extends Controller
         $trip = Trip::where('user_id', Auth::id())
                     ->where('id', $request->trip_id)->firstOrFail();
 
-        if($trip->trip_genre == "outgoing" && $trip->trip_type == "groups"){
+        if($trip->trip_genre == "outgoing" || $trip->trip_genre == "incoming" && $trip->trip_type == "groups"){
 
             $tour->update($request->only(['trip_id', 'name', 'date', 'tour_leader', 'driver_name', 'mobile']));
+            $tour->tour_genre = $trip->trip_genre;
+            $tour->save();
+
             $client->update($request->only(['client', 'passport_no', 'accomodation', 'adult', 'child', 'payment', 'notes']));
             $client->tour_id = $tour->id;
             $client->total = $client->adult + $client->child;
