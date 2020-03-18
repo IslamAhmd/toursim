@@ -25,7 +25,7 @@ class CreateTripsTable extends Migration
             $table->json('domestic_trans')->nullable();
             $table->json('transportations')->nullable();
             $table->json('guides');
-            $table->json('leaders');
+            $table->json('leaders')->nullable();
             $table->json('Destinations');
             $table->json('accomodations')->nullable();
             $table->date('arrival_date');

@@ -11,6 +11,7 @@ use App\Bus;
 use App\Companion;
 use Validator;
 use Illuminate\Support\Facades\Auth;
+use \stdClass;
 
 
 class ClientController extends Controller
@@ -58,6 +59,33 @@ class ClientController extends Controller
 
     }
 
+    public function getNationality($tripId){
+
+        $tripNationality = Trip::where('user_id', Auth::id())
+                    ->where('id', $tripId)
+                    ->firstOrFail()->nationality;
+
+
+        $nationality = [];
+        foreach ((array) $tripNationality as $value) {
+
+            $obj = new stdClass;
+
+            $obj->name = $value;
+
+            $nationality[] = $obj;
+
+        }
+
+
+        return response()->json([
+
+            'status' => 'success',
+            'data' => $nationality
+
+        ]);
+
+    }
 
     public function index($companyId)
     {
@@ -170,7 +198,7 @@ class ClientController extends Controller
             'dests' => 'required_unless:trip_type,dayuse',
             'dests.*.name' => 'required_if:trip_type,individual',
             'dests.*.arrival_date' => 'date|required_if:trip_type,individual',
-            'dests.*.departure_date' => 'date|required_if:trip_type,individual',
+            'dests.*.departure_date' => 'date|required_if:trip_type,individual|after_or_equal:dests.*.arrival_date',
             'dests.*.accomodation' => 'required_unless:trip_type,dayuse',
             'dests.*.room_category' => 'required_unless:trip_type,dayuse',
             'dests.*.meal_plan' => 'required_unless:trip_type,dayuse',
@@ -188,8 +216,9 @@ class ClientController extends Controller
             'dests.*.departure_date.required_if' => 'the destination departure date field is required if the trips type is individual',
             'seats_numbers.*.exists' => 'this seat number does not exist in the bus',
             'seats_numbers.*.integer' => 'this seat must be number',
-            'passport_num.required_if' => 'the passport number is required if the trip is outgoing',
-            'nationality.required_if' => 'the nationality is required if the trip is outgoing',
+            'passport_num.required_if' => 'the passport number is required if the trip is outgoing or incoming',
+            'nationality.required_if' => 'the nationality is required if the trip is outgoing or incoming',
+            'dests.*.departure_date.after_or_equal' => "the destination's departure date must be after or equal it's destination's arrival date"
 
 
         ];
@@ -317,9 +346,9 @@ class ClientController extends Controller
             Companion::create([
 
                 'client_id' => $client->id,
-                'name' => $comp['name'],
+                'companion' => $comp['companion'],
                 'passport_no' => $comp['passport_no'],
-                'nationality' => $comp['nationality']
+                'comp_nationality' => $comp['comp_nationality']
 
             ]);
 
@@ -365,6 +394,10 @@ class ClientController extends Controller
         }
 
         $this->authorize('view', $client);
+        
+        $client->double = $client->double / 2;
+        $client->triple = $client->triple / 3;
+        $client->quad = $client->quad / 4;
 
         return response()->json([
 
@@ -429,7 +462,7 @@ class ClientController extends Controller
             'dests' => 'required_unless:trip_type,dayuse',
             'dests.*.name' => 'required_if:trip_type,individual',
             'dests.*.arrival_date' => 'date|required_if:trip_type,individual',
-            'dests.*.departure_date' => 'date|required_if:trip_type,individual',
+            'dests.*.departure_date' => 'date|required_if:trip_type,individual|after_or_equal:dests.*.arrival_date',
             'dests.*.accomodation' => 'required_unless:trip_type,dayuse',
             'dests.*.room_category' => 'required_unless:trip_type,dayuse',
             'dests.*.meal_plan' => 'required_unless:trip_type,dayuse',
@@ -447,9 +480,9 @@ class ClientController extends Controller
             'dests.*.departure_date.required_if' => 'the destination departure date field is required if the trips type is individual',
             'seats_numbers.*.exists' => 'this seat number does not exist in the bus',
             'seats_numbers.*.integer' => 'this seat must be number',
-            'passport_num.required_if' => 'the passport number is required if the trip is outgoing',
-            'nationality.required_if' => 'the nationality is required if the trip is outgoing',
-
+            'passport_num.required_if' => 'the passport number is required if the trip is outgoing or incoming',
+            'nationality.required_if' => 'the nationality is required if the trip is outgoing or incoming',
+            'dests.*.departure_date.after_or_equal' => "the destination's departure date must be after or equal it's destination's arrival date"
 
         ];
 
@@ -596,9 +629,9 @@ class ClientController extends Controller
             Companion::create([
 
                 'client_id' => $client->id,
-                'name' => $comp['name'],
+                'companion' => $comp['companion'],
                 'passport_no' => $comp['passport_no'],
-                'nationality' => $comp['nationality']
+                'comp_nationality' => $comp['comp_nationality']
 
             ]);
 

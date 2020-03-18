@@ -12,8 +12,7 @@ class Client extends Model
     protected $casts = [
 
     	'destination' => 'array',
-    	'seats_numbers' => 'array'
-
+    	'seats_numbers' => 'array',
     ];
 
 

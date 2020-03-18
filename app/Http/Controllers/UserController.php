@@ -35,12 +35,13 @@ class UserController extends Controller
                         $companyId = Company::where('user_id', $user->id)->first()->id;
 
                         $user->company_id = $companyId;
+                        $user->status = 1;
 
-                        if(Company::where('user_id', $user->id)->count() == 1){
+                        // if(Company::where('user_id', $user->id)->count() == 1){
 
-                            $user->status = 1;
+                        //     $user->status = 1;
 
-                        }
+                        // }
 
                     }
 

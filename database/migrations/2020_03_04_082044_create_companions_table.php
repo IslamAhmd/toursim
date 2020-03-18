@@ -16,9 +16,9 @@ class CreateCompanionsTable extends Migration
         Schema::create('companions', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('client_id');
-            $table->string('name');
-            $table->string('passport_no');
-            $table->string('nationality');
+            $table->string('companion')->nullable();
+            $table->string('passport_no')->nullable();
+            $table->string('comp_nationality')->nullable();
             $table->timestamps();
         });
     }

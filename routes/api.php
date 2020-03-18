@@ -46,6 +46,7 @@ Route::group(['middleware' => ['jwt.verify']], function() {
 	Route::get('/{companyId}/client', 'ClientController@index');
 	Route::get('/{companyId}/getseats', 'ClientController@getseats');
 	Route::get('/trip/{tripId}/buses', 'ClientController@getBuses');
+	Route::get('/trip/{tripId}/nationality', 'ClientController@getNationality');
 	// Route::get('/trip/{tripId}/clients', 'ClientController@getNames');
 
 	Route::resource('tour', 'TourController')->except(['create', 'edit', 'index']);
@@ -56,6 +57,11 @@ Route::group(['middleware' => ['jwt.verify']], function() {
 	
 
 	Route::resource('accept', 'VisaAcceptController')->except(['create', 'edit']);
+
+
+	Route::resource('ticket', 'TicketController')->except(['create', 'edit', 'index']);
+	Route::get('/{userId}/ticket', 'TicketController@index');
+
 
 
 });

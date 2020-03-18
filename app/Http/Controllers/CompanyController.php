@@ -22,7 +22,6 @@ class CompanyController extends Controller
 
     public function __construct(){
 
-        // $this->middleware('SuperOrAdmin')->only(['index', 'getCompany', 'show']);
         $this->middleware('Admin')->only(['store', 'update']);
         $this->middleware('SuperAdmin')->only(['destroy', 'disable']);
 
@@ -97,6 +96,17 @@ class CompanyController extends Controller
             ]);
         }
 
+        if(Company::where('user_id', Auth::id())->exists()){
+
+            return response()->json([
+
+                'status' => 'error',
+                'message' => 'Your Company already exists!'
+
+            ]);
+
+        }
+        
         $company = Company::create($request->except(['UserHR', 'PasswordHr']));
 
         \File::makeDirectory(public_path('/data/' . $company->name), 0775, true);

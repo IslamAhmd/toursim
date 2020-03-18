@@ -159,10 +159,10 @@ class TripController extends Controller
             'Destinations' => 'required',
             'guides' => 'required',
             'leaders' => 'required_if:trip_genre,incoming',
-            'arrival_date' => 'required',
+            'arrival_date' => 'required|date',
             'arrival_port' => 'required_if:trip_genre,incoming',
             'arrival_time' => 'required_if:trip_genre,incoming',
-            'departure_date' => 'required',
+            'departure_date' => 'required|date|after_or_equal:arrival_date',
             'departure_port' => 'required_if:trip_genre,incoming',
             'departure_time' => 'required_if:trip_genre,incoming',
             'capacity' => 'integer',
@@ -170,7 +170,7 @@ class TripController extends Controller
             'accomodations' => 'required_if:trip_type,groups',
             'dests' => 'required_if:trip_type,groups',
             'dests.*.arrival_date' => 'required_if:trip_type,groups|date',
-            'dests.*.departure_date' => 'required_if:trip_type,groups|date',
+            'dests.*.departure_date' => 'required_if:trip_type,groups|date|after_or_equal:dests.*.arrival_date',
             'dests.*.accomodation' => 'required_if:trip_type,groups',
             'programs' => 'required',
             'programs.*.items.*.date' => 'required|date',
@@ -196,6 +196,8 @@ class TripController extends Controller
             'programs.*.items.*.desc.required' => 'the program description is required',
             'country.required_if' => 'the country field is required if trip type is outgoing',
             'domestic_trans.required_if' => 'the domestic transportations field is required if trip type is outgoing',
+            'departure_date.after_or_equal' => "the departure date must be after or equal the trip's arrival date",
+            'dests.*.departure_date.after_or_equal' => "the destination departure date must be after or equal the destination's arrival date"
 
         ];
         $validator = Validator::make($request->all(), $rules, $messages);
@@ -336,6 +338,38 @@ class TripController extends Controller
         }
 
 
+        $programs = [];
+        foreach ($trip['Destinations'] as $value) {
+
+            $program = [];
+            $parentObj = new stdClass;
+            $parentObj->dest_name = $value;
+
+        
+            foreach ($trip->programs as $prog) {
+
+                if($prog->dest_name == $value){
+
+                    $obj = new stdClass;
+                    $obj->trip_time = $prog->trip_time;
+                    $obj->trip_date = $prog->trip_date;
+                    $obj->desc = $prog->desc;
+
+                    $program[] = $obj;
+                }
+
+                $parentObj->data = $program;
+
+                
+            }
+
+            $programs[] = $parentObj;
+
+
+        }
+
+        unset($trip->programs);
+        $trip->programs = $programs;
 
         return response()->json([
 
@@ -380,10 +414,10 @@ class TripController extends Controller
             'Destinations' => 'required',
             'guides' => 'required',
             'leaders' => 'required_if:trip_genre,incoming',
-            'arrival_date' => 'required',
+            'arrival_date' => 'required|date',
             'arrival_port' => 'required_if:trip_genre,incoming',
             'arrival_time' => 'required_if:trip_genre,incoming',
-            'departure_date' => 'required',
+            'departure_date' => 'required|date|after_or_equal:arrival_date',
             'departure_port' => 'required_if:trip_genre,incoming',
             'departure_time' => 'required_if:trip_genre,incoming',
             'capacity' => 'integer',
@@ -391,12 +425,13 @@ class TripController extends Controller
             'accomodations' => 'required_if:trip_type,groups',
             'dests' => 'required_if:trip_type,groups',
             'dests.*.arrival_date' => 'required_if:trip_type,groups|date',
-            'dests.*.departure_date' => 'required_if:trip_type,groups|date',
+            'dests.*.departure_date' => 'required_if:trip_type,groups|date|after_or_equal:dests.*.arrival_date',
             'dests.*.accomodation' => 'required_if:trip_type,groups',
             'programs' => 'required',
-            'programs.*.date' => 'required|date',
-            'programs.*.time' => 'required',
-            'programs.*.desc' => 'required',
+            'programs.*.items.*.date' => 'required|date',
+            'programs.*.items.*.time' => 'required',
+            'programs.*.items.*.desc' => 'required',
+
 
         ];
 
@@ -410,12 +445,14 @@ class TripController extends Controller
             'dests.*.departure_date' => 'the destination departure date must be date',
             'dests.*.accomodation' => 'the destination accomodation is required if the trip is groups',
             'programs.required' => 'the trip program is required',
-            'programs.*.date.date' => 'the program date must be date',
-            'programs.*.date.required' => 'the program date is required',
-            'programs.*.time.required' => 'the program time is required',
-            'programs.*.desc.required' => 'the program description is required',
+            'programs.*.items.*.date.date' => 'the program date must be date',
+            'programs.*.items.*.date.required' => 'the program date is required',
+            'programs.*.items.*.time.required' => 'the program time is required',
+            'programs.*.items.*.desc.required' => 'the program description is required',
             'country.required_if' => 'the country field is required if trip type is outgoing',
             'domestic_trans.required_if' => 'the domestic transportations field is required if trip type is outgoing',
+            'departure_date.after_or_equal' => "the departure date must be after or equal the trip's arrival date",
+            'dests.*.departure_date.after_or_equal' => "the destination departure date must be after or equal the destination's arrival date"
 
         ];
 
@@ -467,22 +504,27 @@ class TripController extends Controller
         // add new program to trip
         $trip->programs()->delete();
 
-        $programs = isset($request->programs)? $request->programs : null;
-               
+        $programs = $request->programs;
+       
         foreach ((array) $programs as $program) {
-                    
-                                    
-            TripProgram::create([
-
-                'trip_id' => $trip->id,
-                'trip_date' => isset($program['date']) ? $program['date']:null,
-                'dest_name' => isset($program['dest_name']) ? $program['dest_name']:null,
-                'trip_time' => isset($program['time']) ? $program['time']:null,
-                'desc' => isset($program['desc']) ? $program['desc'] : null
-
-            ]);
+            
+            $destName = $program['dest_name'];
+            $times = $program['items'];
 
             
+            foreach ((array) $times as $time) {
+                
+                TripProgram::create([
+
+                    'trip_id' => $trip->id,
+                    'trip_date' => isset($time['date']) ? $time['date']:null,
+                    'trip_time' => isset($time['time']) ? $time['time']:null,
+                    'dest_name' => $destName,
+                    'desc' => isset($time['desc']) ? $time['desc'] : null
+
+                ]);
+
+            }
         }
 
         $trip = $trip->with(['destinations', 'programs'])->find($trip->id);
